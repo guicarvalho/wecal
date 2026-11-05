@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script>try { if (localStorage.getItem("wecal-sidebar-collapsed") === "true") document.documentElement.dataset.sidebarCollapsed = "true"; } catch (_) {}</script>
   <meta name="theme-color" content="#0b1418"/>
   <title>WeCal — Sua agenda a dois</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1' y='1' width='22' height='22' rx='5' fill='%23102329'/%3E%3Crect x='4' y='4' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='10' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='10' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='10' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='16' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3C/svg%3E"/>
@@ -82,20 +83,22 @@
     .app-btn-danger{background:#38252c;border-color:#875061;color:#ffb8c4}.app-btn-danger:hover{background:#492d36}
     .app-icon-btn{box-sizing:border-box;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #49606a;border-radius:10px;background:#1b2b33;color:#edf5f7}
     #menu-toggle[aria-expanded="true"] .menu-icon-open{display:none}#menu-toggle[aria-expanded="true"] .menu-icon-close{display:block}
+    #sidebar-toggle{position:fixed;z-index:60;top:28px;left:222px;width:36px;height:36px;padding:0;border-radius:9999px;box-shadow:0 4px 14px #0005}
+    #sidebar-tooltip{position:fixed;z-index:1000;max-width:min(240px,calc(100vw - 24px));padding:7px 10px;border:1px solid #49606a;border-radius:8px;background:#1b2b33;color:#edf5f7;font:600 12px/16px Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 8px 24px #0006}
+    #sidebar-tooltip[hidden]{display:none}
     @media (min-width:1024px){
-      #app-shell[data-sidebar-collapsed="true"]{grid-template-columns:76px minmax(0,1fr)}
-      #app-shell[data-sidebar-collapsed="true"] aside{align-items:center;gap:16px;padding-inline:12px}
-      #app-shell[data-sidebar-collapsed="true"] .brand-header{justify-content:center}
-      #app-shell[data-sidebar-collapsed="true"] .sidebar-toggle-row{justify-content:center}
-      #app-shell[data-sidebar-collapsed="true"] [data-tooltip]{position:relative}
-      #app-shell[data-sidebar-collapsed="true"] .sidebar-label,#app-shell[data-sidebar-collapsed="true"] aside section{display:none}
-      #app-shell[data-sidebar-collapsed="true"] #mobile-menu{width:100%;align-items:center}
-      #app-shell[data-sidebar-collapsed="true"] nav{width:auto;align-items:center}
-      #app-shell[data-sidebar-collapsed="true"] nav a,#app-shell[data-sidebar-collapsed="true"] form button{position:relative;width:44px;min-width:44px;height:44px;justify-content:center;gap:0;padding:0}
-      #app-shell[data-sidebar-collapsed="true"] form{width:auto}
-      #app-shell[data-sidebar-collapsed="true"] [data-tooltip]:hover::after,#app-shell[data-sidebar-collapsed="true"] [data-tooltip]:focus-visible::after{content:attr(data-tooltip);position:absolute;z-index:100;left:calc(100% + 10px);top:50%;transform:translateY(-50%);white-space:nowrap;border:1px solid #49606a;border-radius:8px;background:#1b2b33;padding:7px 10px;color:#edf5f7;font:600 12px/16px Manrope,ui-sans-serif,system-ui,sans-serif;box-shadow:0 8px 24px #0006}
-      #app-shell[data-sidebar-collapsed="true"] .sidebar-icon-expanded{display:none}
-      #app-shell[data-sidebar-collapsed="true"] .sidebar-icon-collapsed{display:block}
+      #sidebar-toggle{left:calc(240px - 18px)}
+      html[data-sidebar-collapsed="true"] #sidebar-toggle{left:calc(76px - 18px)}
+      html[data-sidebar-collapsed="true"] #app-shell{grid-template-columns:76px minmax(0,1fr)}
+      html[data-sidebar-collapsed="true"] #app-shell aside{align-items:center;gap:16px;padding-inline:12px}
+      html[data-sidebar-collapsed="true"] #app-shell .brand-header{justify-content:center}
+      html[data-sidebar-collapsed="true"] #app-shell .sidebar-label,html[data-sidebar-collapsed="true"] #app-shell aside section{display:none}
+      html[data-sidebar-collapsed="true"] #app-shell #mobile-menu{width:100%;align-items:center}
+      html[data-sidebar-collapsed="true"] #app-shell nav{width:auto;align-items:center}
+      html[data-sidebar-collapsed="true"] #app-shell nav a,html[data-sidebar-collapsed="true"] #app-shell form button{position:relative;width:44px;min-width:44px;height:44px;justify-content:center;gap:0;padding:0}
+      html[data-sidebar-collapsed="true"] #app-shell form{width:auto}
+      html[data-sidebar-collapsed="true"] #app-shell .sidebar-icon-expanded{display:none}
+      html[data-sidebar-collapsed="true"] #app-shell .sidebar-icon-collapsed{display:block}
     }
 
     button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #8dece4;outline-offset:2px}
@@ -114,17 +117,15 @@
     <aside id="desktop-sidebar" class="flex flex-col gap-4 bg-[#102329] px-4 py-4 text-[#edf5f7] sm:px-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:px-5 lg:py-6">
       <div class="brand-header flex items-center justify-between">
         <div>
-          <div class="brand-lockup flex items-baseline gap-2"><div aria-hidden="true" class="grid h-8 w-8 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5"><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span></div><h1 class="sidebar-label text-[25px] font-extrabold tracking-tight lg:text-[20px]">WeCal</h1><p class="sidebar-label whitespace-nowrap text-[11px] leading-5 text-[#a6bbc3] lg:text-[10px]">Sua agenda a dois</p></div>
+          <div class="brand-lockup flex items-center gap-2"><div aria-hidden="true" class="grid h-8 w-8 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5"><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span></div><h1 class="sidebar-label text-[25px] font-extrabold tracking-tight lg:text-[20px]">WeCal</h1><p class="sidebar-label whitespace-nowrap text-[11px] leading-5 text-[#a6bbc3] lg:text-[10px]">Sua agenda a dois</p></div>
         </div>
         <button id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobile-menu" class="app-icon-btn hover:bg-[#223a43] lg:hidden">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-open h-5 w-5"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-close h-5 w-5 hidden"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
 
       </div>
-
-      <div class="sidebar-toggle-row hidden lg:flex justify-end"><button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="desktop-sidebar" data-tooltip="Recolher menu lateral" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-expanded h-5 w-5"><path d="m15 18-6-6 6-6"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-collapsed h-5 w-5 hidden"><path d="m9 18 6-6-6-6"/></svg></button></div>
-      <div id="mobile-menu" class="hidden flex-col gap-5 lg:flex lg:flex-1">
-        <nav aria-label="Navegação principal" class="flex flex-wrap items-center gap-2 lg:flex-col lg:items-stretch">
+<div id="mobile-menu" class="hidden flex-col gap-5 lg:flex lg:flex-1">
+        <nav aria-label="Navegação principal" class="flex flex-col items-stretch gap-2">
           <a href="#calendar-section" aria-current="page" class="inline-flex min-h-11 items-center gap-3 rounded-xl bg-white/10 px-3 text-sm font-semibold text-[#edf5f7] ring-1 ring-inset ring-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Calendário" data-tooltip="Calendário">
             <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg><span class="sidebar-label">Calendário</span></a>
           <a href="/settings" class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Conexões" data-tooltip="Conexões">
@@ -148,14 +149,16 @@
         </form>
       </div>
     </aside>
-
-    <main id="main-content" class="min-w-0 px-3 py-5 sm:px-5 sm:py-6 lg:px-6 lg:py-6">
+    <button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="desktop-sidebar" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-expanded h-5 w-5"><path d="m15 18-6-6 6-6"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-collapsed h-5 w-5 hidden"><path d="m9 18 6-6-6-6"/></svg></button>
+        <main id="main-content" class="min-w-0 px-3 py-5 sm:px-5 sm:py-6 lg:px-6 lg:py-6">
       <!-- Calendário FullCalendar -->
       <section id="calendar-section" class="scroll-mt-6 overflow-x-auto rounded-2xl border border-[#30434c] bg-[#142027] p-3 shadow-lg shadow-black/20 sm:p-5" tabindex="0" aria-label="Calendário da agenda">
         <div id="calendar"></div>
       </section>
     </main>
   </div>
+
+  <div id="sidebar-tooltip" role="tooltip" hidden></div>
 
   <!-- Popover de detalhes do evento -->
   <div id="event-popover"
@@ -173,6 +176,7 @@
 
       function setMobileMenuOpen(open, returnFocus) {
         mobileMenu.classList.toggle('hidden', !open);
+      mobileMenu.classList.toggle('flex', open);
         menuToggle.setAttribute('aria-expanded', String(open));
         menuToggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
         if (!open && returnFocus) menuToggle.focus();
@@ -251,14 +255,65 @@
       calendar.render();
       var sidebarToggle = document.getElementById('sidebar-toggle');
       var appShell = document.getElementById('app-shell');
+      const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';
+      appShell.setAttribute('data-sidebar-collapsed', String(initialCollapsed));
+      sidebarToggle.setAttribute('aria-expanded', String(!initialCollapsed));
+      sidebarToggle.setAttribute('aria-label', initialCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral');
+
+      const sidebarTooltip = document.getElementById('sidebar-tooltip');
+      const sidebarItems = document.querySelectorAll('#desktop-sidebar [data-tooltip]');
+      let activeSidebarItem = null;
+      function positionSidebarTooltip() {
+        if (!activeSidebarItem) {
+          sidebarTooltip.hidden = true;
+          return;
+        }
+        if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) {
+          activeSidebarItem.removeAttribute('aria-describedby');
+          activeSidebarItem = null;
+          sidebarTooltip.hidden = true;
+          return;
+        }
+        sidebarTooltip.textContent = activeSidebarItem.dataset.tooltip;
+        sidebarTooltip.hidden = false;
+        const target = activeSidebarItem.getBoundingClientRect();
+        const tip = sidebarTooltip.getBoundingClientRect();
+        sidebarTooltip.style.left = Math.max(8, Math.min(target.right + 8, window.innerWidth - tip.width - 8)) + 'px';
+        sidebarTooltip.style.top = Math.max(8, Math.min(target.top + target.height / 2 - tip.height / 2, window.innerHeight - tip.height - 8)) + 'px';
+      }
+      function showSidebarTooltip(item) {
+        if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) return;
+        if (activeSidebarItem && activeSidebarItem !== item) activeSidebarItem.removeAttribute('aria-describedby');
+        activeSidebarItem = item;
+        item.setAttribute('aria-describedby', 'sidebar-tooltip');
+        positionSidebarTooltip();
+      }
+      function hideSidebarTooltip(item) {
+        if (item.matches(':hover') || document.activeElement === item) return;
+        item.removeAttribute('aria-describedby');
+        if (activeSidebarItem === item) {
+          activeSidebarItem = null;
+          sidebarTooltip.hidden = true;
+        }
+      }
+      sidebarItems.forEach(item => {
+        item.addEventListener('pointerenter', () => showSidebarTooltip(item));
+        item.addEventListener('pointerleave', () => hideSidebarTooltip(item));
+        item.addEventListener('focus', () => showSidebarTooltip(item));
+        item.addEventListener('blur', () => hideSidebarTooltip(item));
+      });
+      window.addEventListener('resize', positionSidebarTooltip);
+      document.getElementById('desktop-sidebar').addEventListener('scroll', positionSidebarTooltip);
       sidebarToggle.addEventListener('click', function () {
         var collapsed = appShell.getAttribute('data-sidebar-collapsed') !== 'true';
         appShell.setAttribute('data-sidebar-collapsed', String(collapsed));
+      document.documentElement.dataset.sidebarCollapsed = String(collapsed);
+      try { localStorage.setItem('wecal-sidebar-collapsed', String(collapsed)); } catch (_) {}
+      if (!collapsed && activeSidebarItem) { activeSidebarItem.removeAttribute('aria-describedby'); activeSidebarItem = null; sidebarTooltip.hidden = true; }
         sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
         var label = collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral';
         sidebarToggle.setAttribute('aria-label', label);
-        sidebarToggle.setAttribute('data-tooltip', label);
-        window.dispatchEvent(new Event('resize'));
+          window.dispatchEvent(new Event('resize'));
       });
 
 
