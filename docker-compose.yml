@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wecal
+      POSTGRES_PASSWORD: wecal
+      POSTGRES_DB: wecal
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Ordem no primeiro boot do volume: schema → seed
+      - ./migrations/0001_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wecal -d wecal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://wecal:wecal@db:5432/wecal
+      PORT: "3000"
+      # OAuth Google (preencha no .env — veja .env.example)
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3001}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      APP_ACCESS_KEY: ${APP_ACCESS_KEY:?Configure APP_ACCESS_KEY no arquivo .env}
+      API_ACCESS_KEYS: ${API_ACCESS_KEYS:?Configure API_ACCESS_KEYS no arquivo .env}
+    ports:
+      # 3001 por padrão: a 3000 do host pode estar ocupada (ex.: dev server Nuxt)
+      - "${WECAL_PORT:-3001}:3000"
+
+volumes:
+  db_data:

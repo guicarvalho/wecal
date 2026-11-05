@@ -1,0 +1,4 @@
+.env
+target/
+recipe.json
+.playwright-mcp/

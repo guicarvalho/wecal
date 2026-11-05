@@ -1,0 +1,51 @@
+[package]
+name = "wecal"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.89"
+
+[dependencies]
+# --- Servidor web (versões atuais) ---
+axum = { version = "0.8", features = ["macros", "query", "form", "multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "compression-br", "compression-gzip"] }
+askama = { version = "0.14" }
+
+# --- Banco de dados assíncrono ---
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls", "chrono", "uuid", "migrate"] }
+
+# --- HTTP client (sync de agendas) ---
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "form", "query"] }
+
+# --- Upload de arquivos (multipart) ---
+tokio-util = { version = "0.7", features = ["io"] }
+mime = "0.3"
+bytes = "1"
+async-trait = "0.1"
+
+# --- Zip (para importar .zip com múltiplos .ics) ---
+zip = "0.6"
+
+# --- Parser de calendário iCalendar (.ics) do Apple/iCloud ---
+ical = "0.11"
+
+# --- Datas, UUID, Serialização ---
+chrono = { version = "0.4", features = ["serde", "clock"] }
+chrono-tz = "0.10"
+rrule = "0.14"
+uuid = { version = "1", features = ["serde", "v4"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+# --- OAuth 2.0 (PKCE) ---
+sha2 = "0.11"
+hmac = "0.13"
+base64 = "0.23"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark" data-color-scheme="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>WeCal — Sua agenda a dois</title>
+  <link rel="icon" href="data:,"/>
+
+  <!-- HTMX + Tailwind -->
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+              400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+              800: '#3730a3', 900: '#312e81'
+            }
+          },
+          fontFamily: { sans: ['Inter', 'ui-sans-system', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+
+  <!-- FullCalendar v7 (MIT) via CDN — bundle global, sem bundler -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales/pt-br/global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/global.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/skeleton.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/palettes/purple.css"/>
+
+  <style>
+    /* FullCalendar v7: o tema monarch usa classes hashadas (fc-monarch-*)
+       — customização correta é pelas variáveis --fc-monarch-* na raiz.
+       Ajustes para casar com a identidade slate/indigo do WeCal. */
+    #calendar {
+      min-width: 700px;
+      --fc-monarch-primary: #6366f1;                    /* indigo-500 do app */
+      --fc-monarch-primary-foreground: #ffffff;
+      --fc-monarch-primary-over: #818cf8;
+      --fc-monarch-primary-down: #4f46e5;
+      --fc-monarch-now: #f43f5e;                        /* rose-500 (agora) */
+      --fc-monarch-outline: #818cf8;                    /* foco indigo */
+      --fc-monarch-highlight: rgba(99, 102, 241, 0.18);
+      --fc-monarch-selected: #4f46e5;                   /* botão de view ativo */
+      --fc-monarch-selected-foreground: #ffffff;
+    }
+    @media (min-width: 768px) {
+      #calendar { min-width: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased">
+  <div class="mx-auto max-w-6xl px-4 py-8">
+    <header class="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-slate-50">WeCal</h1>
+        <p class="text-slate-400 mt-1">Sua agenda a dois, em um calendário único.</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button hx-post="/sync" hx-target="#sync-flash" hx-swap="innerHTML"
+                hx-on::after-request="window.wecalCalendar &amp;&amp; wecalCalendar.refetchEvents()"
+                class="text-sm px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-900">
+          ⟳ Sincronizar
+        </button>
+        <a href="/settings"
+           class="text-sm px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-900">
+          ⚙️ Conexões
+        </a>
+        <form method="post" action="/logout">
+          <button class="text-sm px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-900">Sair</button>
+        </form>
+      </div>
+    </header>
+
+    <div id="sync-flash" class="mb-4 text-sm space-y-2"></div>
+
+    <!-- Calendário FullCalendar -->
+    <section class="overflow-x-auto bg-slate-900 border border-slate-800 rounded-2xl p-3 md:p-5 shadow-sm" tabindex="0" aria-label="Calendário semanal; deslize horizontalmente para ver os outros dias">
+      <div id="calendar"></div>
+    </section>
+
+    <!-- Legenda das agendas importadas -->
+    <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+      {% for calendar in calendars %}
+      <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm" style="background:{{ calendar.color }}"></span> {{ calendar.name }}</span>
+      {% endfor %}
+      <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm" style="background:#64748b"></span> 🔒 Privado</span>
+      <span class="ml-auto text-slate-500">sync automática a cada 15 min</span>
+    </div>
+  </div>
+
+  <!-- Popover de detalhes do evento -->
+  <div id="event-popover"
+       class="hidden fixed z-50 w-72 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-1rem)] overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl p-4 text-sm">
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Popover DEVE existir antes do render: datesSet dispara durante render()
+      var popover = document.getElementById('event-popover');
+      var compact = window.matchMedia('(max-width: 767px)').matches;
+
+      var calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        locale: 'pt-br',
+        firstDay: 0,
+        height: 'auto',
+        nowIndicator: true,
+        initialView: 'timeGridWeek',
+        slotMinTime: '07:00:00',
+        slotMaxTime: '20:00:00',
+        slotLabelContent: function (arg) {
+          return arg.text || (arg.date.getHours() === 7 ? '07' : '');
+        },
+        views: compact ? {
+          timeGridWeek: { titleFormat: { month: 'short', year: 'numeric' } }
+        } : {},
+        headerToolbar: {
+          left: compact ? 'title prev,next' : 'prev,next today',
+          center: compact ? '' : 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        // JSON feed do Axum — ?start=&end= são enviados automaticamente
+        events: '/api/events',
+        // Cores por proveniência/estado — FullCalendar v7 usa `color`
+        // (alimenta --fc-event-color: dot + fundo a 15% + borda)
+        eventDataTransform: function (ev) {
+          ev.extendedProps = {
+            source: ev.source || '',
+            calendar_name: ev.calendar_name || '',
+            calendar_color: ev.calendar_color || '',
+            is_private: !!ev.is_private,
+            description: ev.description || ''
+          };
+          if (ev.extendedProps.is_private) ev.title = '🔒 ' + ev.title;
+          if (ev.extendedProps.source === 'Import' && ev.calendar_color) {
+            ev.color = ev.calendar_color;
+            ev.textColor = contrastText(ev.calendar_color);
+          } else if (ev.extendedProps.is_private) {
+            ev.color = '#64748b';
+          } else if (ev.extendedProps.source === 'Apple') {
+            ev.color = '#6366f1';
+          } else {
+            ev.color = '#8b5cf6';
+          }
+          ev.contrastColor = ev.textColor || '#ffffff';
+          return ev;
+        },
+        eventClick: function (info) {
+          info.jsEvent.preventDefault();
+          info.jsEvent.stopPropagation(); // impede o listener global de fechar na hora
+          showPopover(info.event, info.jsEvent);
+        },
+        datesSet: function () { hidePopover(); }
+      });
+      calendar.render();
+      window.wecalCalendar = calendar;
+
+      // ---------- Popover de detalhes ----------
+      function showPopover(event, jsEvent) {
+        var p = event.extendedProps;
+        while (popover.firstChild) popover.removeChild(popover.firstChild);
+
+        var title = el('div', 'font-semibold text-slate-50 leading-snug', event.title);
+        var when = el('div', 'text-xs text-slate-400 mt-1', fmtRange(event.start, event.end));
+        popover.appendChild(title);
+        popover.appendChild(when);
+
+        var badges = el('div', 'flex flex-wrap gap-1.5 mt-2');
+        if (p.source === 'Import') {
+          var calendarBadge = badge(p.calendar_name || 'Agenda importada', 'bg-slate-800 text-slate-200 border-slate-700');
+          if (p.calendar_color) {
+            calendarBadge.style.backgroundColor = p.calendar_color;
+            calendarBadge.style.borderColor = p.calendar_color;
+            calendarBadge.style.color = contrastText(p.calendar_color);
+          }
+          badges.appendChild(calendarBadge);
+        } else {
+          var src = p.source === 'Apple'
+            ? ['🍎 Apple', 'bg-indigo-950 text-indigo-300 border-indigo-800']
+            : ['📅 Google', 'bg-violet-950 text-violet-300 border-violet-800'];
+          badges.appendChild(badge(src[0], src[1]));
+        }
+        if (p.is_private) badges.appendChild(badge('🔒 Privado', 'bg-slate-800 text-slate-300 border-slate-700'));
+        popover.appendChild(badges);
+
+        if (p.description) {
+          var description = el('p', 'text-slate-400 mt-2 border-t border-slate-800 pt-2', p.description);
+          description.style.overflowWrap = 'anywhere';
+          popover.appendChild(description);
+        }
+
+        popover.classList.remove('hidden');
+        var x = Math.min(jsEvent.clientX + 14, window.innerWidth - popover.offsetWidth - 10);
+        var y = Math.min(jsEvent.clientY + 14, window.innerHeight - popover.offsetHeight - 10);
+        popover.style.left = Math.max(8, x) + 'px';
+        popover.style.top = Math.max(8, y) + 'px';
+      }
+
+      function hidePopover() { if (popover) popover.classList.add('hidden'); }
+
+      function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        e.className = cls;
+        e.textContent = text;   // sempre textContent — nada de HTML do banco
+        return e;
+      }
+
+      function badge(text, cls) {
+        return el('span', 'text-[11px] px-2 py-0.5 rounded-full border ' + cls, text);
+      }
+
+      function contrastText(color) {
+        if (color.startsWith('hsl(')) return '#0f172a';
+        var channels = color.slice(1).match(/.{2}/g).map(function (value) {
+          var channel = parseInt(value, 16) / 255;
+          return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+        });
+        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.179
+          ? '#0f172a'
+          : '#ffffff';
+      }
+
+      function fmtRange(start, end) {
+        var d = { day: '2-digit', month: '2-digit' };
+        var t = { hour: '2-digit', minute: '2-digit' };
+        return start.toLocaleDateString('pt-BR', d) + ' · ' +
+               start.toLocaleTimeString('pt-BR', t) + ' – ' +
+               end.toLocaleTimeString('pt-BR', t);
+      }
+
+      document.addEventListener('click', function (e) {
+        if (popover.classList.contains('hidden')) return;
+        if (e.target.closest && e.target.closest('.fc-event')) return; // clique em evento: já tratado
+        if (!popover.contains(e.target)) hidePopover();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') hidePopover();
+      });
+    });
+  </script>
+</body>
+</html>

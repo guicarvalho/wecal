@@ -1,0 +1,6 @@
+target/
+pkg/
+.git/
+.env
+Cargo.lock
+recipe.json

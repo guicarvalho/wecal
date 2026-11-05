@@ -1,0 +1,2 @@
+ALTER TABLE wecal_events
+    ADD COLUMN IF NOT EXISTS is_transparent BOOLEAN NOT NULL DEFAULT false;

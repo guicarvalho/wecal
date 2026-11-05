@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#020617"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>WeCal — Acesso</title>
+  <link rel="icon" href="data:,"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+  <main class="grid min-h-screen place-items-center px-4 py-10">
+    <section class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl sm:p-8">
+      <div class="mb-7 flex items-center gap-3">
+        <div aria-hidden="true" class="grid h-10 w-10 grid-cols-3 gap-1 rounded-lg border border-slate-700 bg-slate-950 p-1.5">
+          <span class="rounded-sm bg-indigo-400"></span><span class="rounded-sm bg-slate-700"></span><span class="rounded-sm bg-slate-700"></span>
+          <span class="rounded-sm bg-emerald-300"></span><span class="rounded-sm bg-indigo-400"></span><span class="rounded-sm bg-slate-700"></span>
+          <span class="rounded-sm bg-slate-700"></span><span class="rounded-sm bg-slate-700"></span><span class="rounded-sm bg-emerald-300"></span>
+        </div>
+        <div>
+          <p class="text-sm font-semibold tracking-wide text-slate-200">WeCal</p>
+          <p class="text-xs text-slate-400">Sua agenda a dois</p>
+        </div>
+      </div>
+
+      <h1 class="text-balance text-2xl font-semibold tracking-tight text-slate-50">Acesse seu calendário</h1>
+      <p class="mt-2 text-sm leading-6 text-slate-400">Informe a chave de acesso para abrir suas agendas.</p>
+
+      <form class="mt-7 space-y-5" method="post" action="/login">
+        <div>
+          <label class="mb-2 block text-sm font-medium text-slate-200" for="access_key">Chave de acesso</label>
+          <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-base text-slate-100 outline-none transition focus-visible:border-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400/30"
+                 type="password" id="access_key" name="access_key" required autocomplete="current-password" spellcheck="false" aria-describedby="access-help"/>
+          <p id="access-help" class="mt-2 text-xs leading-5 text-slate-400">A chave foi fornecida por quem administra este calendário.</p>
+        </div>
+        {% if let Some(message) = error %}
+          <p class="text-sm text-rose-300" role="alert">{{ message }}</p>
+        {% endif %}
+        <button class="w-full rounded-lg bg-indigo-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">Entrar</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

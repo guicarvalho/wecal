@@ -1,0 +1,10 @@
+{% for o in outcomes %}
+  <div class="rounded-lg border px-3 py-2
+    {% if o.ok %}border-emerald-800 bg-emerald-950/50 text-emerald-300
+    {% else %}border-rose-800 bg-rose-950/50 text-rose-300{% endif %}">
+    <span class="font-medium">{{ o.provider }}:</span> {{ o.message }}
+  </div>
+{% endfor %}
+{% if outcomes.is_empty() %}
+  <p class="text-slate-500">Nenhuma conexão ativa para sincronizar.</p>
+{% endif %}
