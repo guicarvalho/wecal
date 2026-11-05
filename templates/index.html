@@ -86,19 +86,28 @@
     #sidebar-toggle{position:fixed;z-index:60;top:28px;left:222px;width:36px;height:36px;padding:0;border-radius:9999px;box-shadow:0 4px 14px #0005}
     #sidebar-tooltip{position:fixed;z-index:1000;max-width:min(240px,calc(100vw - 24px));padding:7px 10px;border:1px solid #49606a;border-radius:8px;background:#1b2b33;color:#edf5f7;font:600 12px/16px Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 8px 24px #0006}
     #sidebar-tooltip[hidden]{display:none}
+    #app-shell{transition:grid-template-columns 220ms cubic-bezier(.2,.8,.2,1)}
+    #desktop-sidebar{transition:padding 220ms cubic-bezier(.2,.8,.2,1),gap 220ms cubic-bezier(.2,.8,.2,1)}
+    .brand-mark{transition:width 220ms cubic-bezier(.2,.8,.2,1),height 220ms cubic-bezier(.2,.8,.2,1)}
+    .sidebar-label:not(.brand-copy),.brand-copy{max-width:220px;opacity:1;overflow:hidden;transition:max-width 200ms cubic-bezier(.2,.8,.2,1),opacity 140ms ease}
+    .sidebar-label:not(.brand-copy){display:inline-block;white-space:nowrap}
+    #sidebar-toggle{transition:left 220ms cubic-bezier(.2,.8,.2,1)}
+    #sidebar-toggle svg{transition:transform 220ms cubic-bezier(.2,.8,.2,1)}
+    @media (prefers-reduced-motion:reduce){ #app-shell,#desktop-sidebar,.brand-mark,.sidebar-label,.brand-copy,#sidebar-toggle,#sidebar-toggle svg{transition:none!important} }
     @media (min-width:1024px){
       #sidebar-toggle{left:calc(240px - 18px)}
       html[data-sidebar-collapsed="true"] #sidebar-toggle{left:calc(76px - 18px)}
       html[data-sidebar-collapsed="true"] #app-shell{grid-template-columns:76px minmax(0,1fr)}
       html[data-sidebar-collapsed="true"] #app-shell aside{align-items:center;gap:16px;padding-inline:12px}
       html[data-sidebar-collapsed="true"] #app-shell .brand-header{justify-content:center}
-      html[data-sidebar-collapsed="true"] #app-shell .sidebar-label,html[data-sidebar-collapsed="true"] #app-shell aside section{display:none}
+      html[data-sidebar-collapsed="true"] #app-shell .sidebar-label:not(.brand-copy),html[data-sidebar-collapsed="true"] #app-shell .brand-copy{max-width:0;opacity:0}
+      html[data-sidebar-collapsed="true"] #app-shell aside section{display:none}
       html[data-sidebar-collapsed="true"] #app-shell #mobile-menu{width:100%;align-items:center}
       html[data-sidebar-collapsed="true"] #app-shell nav{width:auto;align-items:center}
       html[data-sidebar-collapsed="true"] #app-shell nav a,html[data-sidebar-collapsed="true"] #app-shell form button{position:relative;width:44px;min-width:44px;height:44px;justify-content:center;gap:0;padding:0}
       html[data-sidebar-collapsed="true"] #app-shell form{width:auto}
-      html[data-sidebar-collapsed="true"] #app-shell .sidebar-icon-expanded{display:none}
-      html[data-sidebar-collapsed="true"] #app-shell .sidebar-icon-collapsed{display:block}
+      html[data-sidebar-collapsed="true"] #app-shell .brand-mark{width:44px;height:44px}
+      html[data-sidebar-collapsed="true"] #sidebar-toggle svg{transform:rotate(180deg)}
     }
 
     button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #8dece4;outline-offset:2px}
@@ -117,7 +126,7 @@
     <aside id="desktop-sidebar" class="flex flex-col gap-4 bg-[#102329] px-4 py-4 text-[#edf5f7] sm:px-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:px-5 lg:py-6">
       <div class="brand-header flex items-center justify-between">
         <div>
-          <div class="brand-lockup flex items-center gap-2"><div aria-hidden="true" class="grid h-8 w-8 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5"><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span></div><h1 class="sidebar-label text-[25px] font-extrabold tracking-tight lg:text-[20px]">WeCal</h1><p class="sidebar-label whitespace-nowrap text-[11px] leading-5 text-[#a6bbc3] lg:text-[10px]">Sua agenda a dois</p></div>
+          <div class="brand-lockup flex items-center gap-2"><div aria-hidden="true" class="brand-mark grid h-10 w-10 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5"><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span></div><div class="brand-copy sidebar-label flex min-w-0 flex-col"><h1 class="text-[25px] font-extrabold leading-8 tracking-tight lg:text-[20px] lg:leading-6">WeCal</h1><p class="whitespace-nowrap text-[11px] leading-4 text-[#a6bbc3] lg:text-[10px]">Sua agenda a dois</p></div></div>
         </div>
         <button id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobile-menu" class="app-icon-btn hover:bg-[#223a43] lg:hidden">
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-open h-5 w-5"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-close h-5 w-5 hidden"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -149,7 +158,7 @@
         </form>
       </div>
     </aside>
-    <button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="desktop-sidebar" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-expanded h-5 w-5"><path d="m15 18-6-6 6-6"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon-collapsed h-5 w-5 hidden"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="desktop-sidebar" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="m15 18-6-6 6-6"/></svg></button>
         <main id="main-content" class="min-w-0 px-3 py-5 sm:px-5 sm:py-6 lg:px-6 lg:py-6">
       <!-- Calendário FullCalendar -->
       <section id="calendar-section" class="scroll-mt-6 overflow-x-auto rounded-2xl border border-[#30434c] bg-[#142027] p-3 shadow-lg shadow-black/20 sm:p-5" tabindex="0" aria-label="Calendário da agenda">
@@ -314,6 +323,9 @@
         var label = collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral';
         sidebarToggle.setAttribute('aria-label', label);
           window.dispatchEvent(new Event('resize'));
+      });
+      appShell.addEventListener('transitionend', function (event) {
+        if (event.target === appShell && event.propertyName === 'grid-template-columns') window.dispatchEvent(new Event('resize'));
       });
 
 
