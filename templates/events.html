@@ -1,24 +1,24 @@
 {% if events.is_empty() %}
-  <p class="text-slate-500">Nenhum evento por aqui ainda. Que tal adicionar um?</p>
+  <p class="text-[#829aa2]">Nenhum evento por aqui ainda. Que tal adicionar um?</p>
 {% else %}
 <div class="space-y-3">
   {% for ev in events %}
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-sm">
+    <div class="bg-[#1b2b33] border border-[#30434c] rounded-xl p-4 shadow-sm">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h3 class="font-semibold text-slate-100">{{ ev.title }}</h3>
+          <h3 class="font-semibold text-[#edf5f7]">{{ ev.title }}</h3>
           {% if let Some(desc) = ev.description %}
-            <p class="text-sm text-slate-400 mt-1">{{ desc }}</p>
+            <p class="text-sm text-[#a6bbc3] mt-1">{{ desc }}</p>
           {% endif %}
         </div>
-        <span class="shrink-0 text-xs px-2 py-1 rounded-full bg-slate-700 text-slate-300">
+        <span class="shrink-0 text-xs px-2 py-1 rounded-full bg-[#223a43] text-[#c2d0d5]">
           {% if let Some(color) = ev.calendar_color.as_deref() %}<span class="inline-block w-2.5 h-2.5 rounded-sm mr-1" style="background:{{ color }}"></span>{% endif %}{{ ev.source_label() }}
         </span>
       </div>
-      <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
-        <span>🕑 {{ ev.time_label() }} · {{ ev.date_label() }}</span>
+      <div class="mt-3 flex items-center gap-2 text-xs text-[#a6bbc3]">
+        <span>Horário: {{ ev.time_label() }} · {{ ev.date_label() }}</span>
         {% if ev.is_private %}
-          <span>🔒 Privado</span>
+          <span>Privado</span>
         {% endif %}
       </div>
     </div>
