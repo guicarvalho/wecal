@@ -1,201 +1,557 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark" data-color-scheme="dark" style="color-scheme: dark">
+
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <script>try { if (localStorage.getItem("wecal-sidebar-collapsed") === "true") document.documentElement.dataset.sidebarCollapsed = "true"; } catch (_) {}</script>
-  <meta name="theme-color" content="#0b1418"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>try {if (localStorage.getItem("wecal-sidebar-collapsed") === "true") document.documentElement.dataset.sidebarCollapsed = "true";} catch (_) { }</script>
+  <meta name="theme-color" content="#0b1418" />
   <title>WeCal — Importar agenda (.ics / .zip)</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1' y='1' width='22' height='22' rx='5' fill='%23102329'/%3E%3Crect x='4' y='4' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='10' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='10' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='10' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='16' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3C/svg%3E"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap" rel="stylesheet"/>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1' y='1' width='22' height='22' rx='5' fill='%23102329'/%3E%3Crect x='4' y='4' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='10' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='10' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='10' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='16' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: { extend: { fontFamily: { sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'] }, colors: { brand: {
-        50:'#e5fffb',100:'#c8fff8',200:'#a4f8ee',300:'#7dece0',400:'#52d6cd',
-        500:'#39c3bb',600:'#259e99',700:'#1e7f7c',800:'#1b6263',900:'#164a4d' } } } }
+      theme: {
+        extend: {
+          fontFamily: {sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif']}, colors: {
+            brand: {
+              50: '#e5fffb', 100: '#c8fff8', 200: '#a4f8ee', 300: '#7dece0', 400: '#52d6cd',
+              500: '#39c3bb', 600: '#259e99', 700: '#1e7f7c', 800: '#1b6263', 900: '#164a4d'
+            }
+          }
+        }
+      }
     };
   </script>
-<style>
-    .app-btn{box-sizing:border-box;min-height:44px;padding:0 16px;border:1px solid transparent;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14px/20px Manrope,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:background-color .15s,border-color .15s,color .15s;cursor:pointer}
-    .app-btn:focus-visible,.app-icon-btn:focus-visible{outline:2px solid #8dece4;outline-offset:2px}
-    .app-btn:disabled{opacity:.6;cursor:not-allowed}
-    .app-btn-primary{background:#52d6cd;color:#082a2b}.app-btn-primary:hover{background:#74e4da}
-    .app-btn-secondary{background:#1b2b33;border-color:#49606a;color:#edf5f7}.app-btn-secondary:hover{background:#223a43}
-    .app-btn-tertiary{color:#a6bbc3}.app-btn-tertiary:hover{background:#223a43;color:#edf5f7}
-    .app-btn-danger{background:#38252c;border-color:#875061;color:#ffb8c4}.app-btn-danger:hover{background:#492d36}
-    .app-icon-btn{box-sizing:border-box;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #49606a;border-radius:10px;background:#1b2b33;color:#edf5f7}
-    #menu-toggle[aria-expanded="true"] .menu-icon-open{display:none}#menu-toggle[aria-expanded="true"] .menu-icon-close{display:block}
-    #sidebar-toggle{position:fixed;z-index:60;top:28px;left:222px;width:36px;height:36px;padding:0;border-radius:9999px;box-shadow:0 4px 14px #0005}
-    #sidebar-tooltip{position:fixed;z-index:1000;max-width:min(240px,calc(100vw - 24px));padding:7px 10px;border:1px solid #49606a;border-radius:8px;background:#1b2b33;color:#edf5f7;font:600 12px/16px Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 8px 24px #0006}
-    #sidebar-tooltip[hidden]{display:none}
-    #app-shell{transition:grid-template-columns 220ms cubic-bezier(.2,.8,.2,1)}
-    #desktop-sidebar{transition:padding 220ms cubic-bezier(.2,.8,.2,1),gap 220ms cubic-bezier(.2,.8,.2,1)}
-    .brand-mark{transition:width 220ms cubic-bezier(.2,.8,.2,1),height 220ms cubic-bezier(.2,.8,.2,1)}
-    .sidebar-label:not(.brand-copy),.brand-copy{max-width:220px;opacity:1;overflow:hidden;transition:max-width 200ms cubic-bezier(.2,.8,.2,1),opacity 140ms ease}
-    .sidebar-label:not(.brand-copy){display:inline-block;white-space:nowrap}
-    #sidebar-toggle{transition:left 220ms cubic-bezier(.2,.8,.2,1)}
-    #sidebar-toggle svg{transition:transform 220ms cubic-bezier(.2,.8,.2,1)}
-    @media (prefers-reduced-motion:reduce){ #app-shell,#desktop-sidebar,.brand-mark,.sidebar-label,.brand-copy,#sidebar-toggle,#sidebar-toggle svg{transition:none!important} }
-    @media (min-width:1024px){
-      #sidebar-toggle{left:calc(240px - 18px)}
-      html[data-sidebar-collapsed="true"] #sidebar-toggle{left:calc(76px - 18px)}
-      html[data-sidebar-collapsed="true"] #app-shell{grid-template-columns:76px minmax(0,1fr)}
-      html[data-sidebar-collapsed="true"] #app-shell aside{align-items:center;gap:16px;padding-inline:12px}
-      html[data-sidebar-collapsed="true"] #app-shell .brand-header{justify-content:center}
-      html[data-sidebar-collapsed="true"] #app-shell .sidebar-label:not(.brand-copy),html[data-sidebar-collapsed="true"] #app-shell .brand-copy{max-width:0;opacity:0}
-      html[data-sidebar-collapsed="true"] #app-shell aside section{display:none}
-      html[data-sidebar-collapsed="true"] #app-shell #mobile-menu{width:100%;align-items:center}
-      html[data-sidebar-collapsed="true"] #app-shell nav{width:auto;align-items:center}
-      html[data-sidebar-collapsed="true"] #app-shell nav a,html[data-sidebar-collapsed="true"] #app-shell form button{position:relative;width:44px;min-width:44px;height:44px;justify-content:center;gap:0;padding:0}
-      html[data-sidebar-collapsed="true"] #app-shell form{width:auto}
-      html[data-sidebar-collapsed="true"] #app-shell .brand-mark{width:44px;height:44px}
-      html[data-sidebar-collapsed="true"] #sidebar-toggle svg{transform:rotate(180deg)}
+  <style>
+    .app-btn {
+      box-sizing: border-box;
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font: 600 14px/20px Manrope, ui-sans-serif, system-ui, sans-serif;
+      text-decoration: none;
+      transition: background-color .15s, border-color .15s, color .15s;
+      cursor: pointer
     }
 
-    button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #8dece4;outline-offset:2px}
+    .app-btn:focus-visible,
+    .app-icon-btn:focus-visible {
+      outline: 2px solid #8dece4;
+      outline-offset: 2px
+    }
+
+    .app-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+    .app-btn-primary {
+      background: #52d6cd;
+      color: #082a2b
+    }
+
+    .app-btn-primary:hover {
+      background: #74e4da
+    }
+
+    .app-btn-secondary {
+      background: #1b2b33;
+      border-color: #49606a;
+      color: #edf5f7
+    }
+
+    .app-btn-secondary:hover {
+      background: #223a43
+    }
+
+    .app-btn-tertiary {
+      color: #a6bbc3
+    }
+
+    .app-btn-tertiary:hover {
+      background: #223a43;
+      color: #edf5f7
+    }
+
+    .app-btn-danger {
+      background: #38252c;
+      border-color: #875061;
+      color: #ffb8c4
+    }
+
+    .app-btn-danger:hover {
+      background: #492d36
+    }
+
+    .app-icon-btn {
+      box-sizing: border-box;
+      width: 44px;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #49606a;
+      border-radius: 10px;
+      background: #1b2b33;
+      color: #edf5f7
+    }
+
+    #menu-toggle[aria-expanded="true"] .menu-icon-open {
+      display: none
+    }
+
+    #menu-toggle[aria-expanded="true"] .menu-icon-close {
+      display: block
+    }
+
+    #sidebar-toggle {
+      position: fixed;
+      z-index: 60;
+      top: 28px;
+      left: 222px;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 9999px;
+      box-shadow: 0 4px 14px #0005
+    }
+
+    #sidebar-tooltip {
+      position: fixed;
+      z-index: 1000;
+      max-width: min(240px, calc(100vw - 24px));
+      padding: 7px 10px;
+      border: 1px solid #49606a;
+      border-radius: 8px;
+      background: #1b2b33;
+      color: #edf5f7;
+      font: 600 12px/16px Manrope, ui-sans-serif, system-ui, sans-serif;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 8px 24px #0006
+    }
+
+    #sidebar-tooltip[hidden] {
+      display: none
+    }
+
+    #app-shell {
+      transition: grid-template-columns 220ms cubic-bezier(.2, .8, .2, 1)
+    }
+
+    #desktop-sidebar {
+      transition: padding 220ms cubic-bezier(.2, .8, .2, 1), gap 220ms cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .brand-mark {
+      transition: width 220ms cubic-bezier(.2, .8, .2, 1), height 220ms cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .sidebar-label:not(.brand-copy),
+    .brand-copy {
+      max-width: 220px;
+      opacity: 1;
+      overflow: hidden;
+      transition: max-width 200ms cubic-bezier(.2, .8, .2, 1), opacity 140ms ease
+    }
+
+    .sidebar-label:not(.brand-copy) {
+      display: inline-block;
+      white-space: nowrap
+    }
+
+    #sidebar-toggle {
+      transition: left 220ms cubic-bezier(.2, .8, .2, 1)
+    }
+
+    #sidebar-toggle svg {
+      transition: transform 220ms cubic-bezier(.2, .8, .2, 1)
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      #app-shell,
+      #desktop-sidebar,
+      .brand-mark,
+      .sidebar-label,
+      .brand-copy,
+      #sidebar-toggle,
+      #sidebar-toggle svg {
+        transition: none !important
+      }
+    }
+
+    @media (min-width:1024px) {
+      #sidebar-toggle {
+        left: calc(240px - 18px)
+      }
+
+      html[data-sidebar-collapsed="true"] #sidebar-toggle {
+        left: calc(76px - 18px)
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell {
+        grid-template-columns: 76px minmax(0, 1fr)
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell aside {
+        align-items: center;
+        gap: 16px;
+        padding-inline: 12px
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell .brand-header {
+        justify-content: center
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell .sidebar-label:not(.brand-copy),
+      html[data-sidebar-collapsed="true"] #app-shell .brand-copy {
+        max-width: 0;
+        opacity: 0
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell aside section {
+        display: none
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell #mobile-menu {
+        width: 100%;
+        align-items: center
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell nav {
+        width: auto;
+        align-items: center
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell nav a,
+      html[data-sidebar-collapsed="true"] #app-shell form button {
+        position: relative;
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        justify-content: center;
+        gap: 0;
+        padding: 0
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell form {
+        width: auto
+      }
+
+      html[data-sidebar-collapsed="true"] #app-shell .brand-mark {
+        width: 44px;
+        height: 44px
+      }
+
+      html[data-sidebar-collapsed="true"] #sidebar-toggle svg {
+        transform: rotate(180deg)
+      }
+    }
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible {
+      outline: 2px solid #8dece4;
+      outline-offset: 2px
+    }
   </style>
 </head>
+
 <body class="min-h-screen bg-[#0b1418] font-sans text-[#edf5f7] antialiased selection:bg-[#52d6cd]/20">
   <div id="app-shell" data-sidebar-collapsed="false" class="min-h-screen lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
-    <aside id="desktop-sidebar" class="flex flex-col gap-4 bg-[#102329] px-4 py-4 text-[#edf5f7] sm:px-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:px-5 lg:py-6">
+    <aside id="desktop-sidebar"
+      class="flex flex-col gap-4 bg-[#102329] px-4 py-4 text-[#edf5f7] sm:px-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:px-5 lg:py-6">
       <div class="brand-header flex items-center justify-between">
-        <a href="/" aria-label="WeCal" class="brand-lockup inline-flex items-center gap-2 text-[20px] font-extrabold tracking-tight"><div aria-hidden="true" class="brand-mark grid h-10 w-10 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5"><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span></div><span class="brand-copy sidebar-label flex min-w-0 flex-col"><span class="text-[20px] leading-6 font-extrabold">WeCal</span><span class="whitespace-nowrap text-[10px] leading-4 font-medium text-[#a6bbc3]">Sua agenda a dois</span></span></a>
-        <button id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobile-menu" class="app-icon-btn hover:bg-[#223a43] lg:hidden">
-          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-open h-5 w-5"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-close h-5 w-5 hidden"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        <a href="/" aria-label="WeCal"
+          class="brand-lockup inline-flex items-center gap-2 text-[20px] font-extrabold tracking-tight">
+          <div aria-hidden="true"
+            class="brand-mark grid h-10 w-10 shrink-0 grid-cols-3 gap-1 rounded-[10px] border border-[#30434c] bg-[#0b1418] p-1.5">
+            <span class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span
+              class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#74e4da]"></span><span
+              class="rounded-sm bg-[#52d6cd]"></span><span class="rounded-sm bg-[#30434c]"></span><span
+              class="rounded-sm bg-[#30434c]"></span><span class="rounded-sm bg-[#30434c]"></span><span
+              class="rounded-sm bg-[#74e4da]"></span></div><span
+            class="brand-copy sidebar-label flex min-w-0 flex-col"><span
+              class="text-[20px] leading-6 font-extrabold">WeCal</span><span
+              class="whitespace-nowrap text-[10px] leading-4 font-medium text-[#a6bbc3]">Sua agenda a dois</span></span>
+        </a>
+        <button id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobile-menu"
+          class="app-icon-btn hover:bg-[#223a43] lg:hidden">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-open h-5 w-5">
+            <path d="M4 5h16" />
+            <path d="M4 12h16" />
+            <path d="M4 19h16" />
+          </svg><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon-close h-5 w-5 hidden">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
         </button>
 
       </div>
-<div id="mobile-menu" class="hidden flex-col gap-5 lg:flex lg:flex-1">
+      <div id="mobile-menu" class="hidden flex-col gap-5 lg:flex lg:flex-1">
         <nav aria-label="Navegação principal" class="flex flex-col gap-2">
-          <a href="/" class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Calendário" data-tooltip="Calendário"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg><span class="sidebar-label">Calendário</span></a>
-          <a href="/settings" class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Conexões" data-tooltip="Conexões"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg><span class="sidebar-label">Conexões</span></a>
-          <a href="/import" aria-current="page" class="inline-flex min-h-11 items-center gap-3 rounded-xl bg-white/10 px-3 text-sm font-semibold text-[#edf5f7] ring-1 ring-inset ring-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Importar agenda" data-tooltip="Importar agenda"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg><span class="sidebar-label">Importar agenda</span></a>
+          <a href="/"
+            class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]"
+            aria-label="Calendário" data-tooltip="Calendário"><svg aria-hidden="true" focusable="false"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" class="h-5 w-5">
+              <path d="M8 2v3" />
+              <path d="M16 2v3" />
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18" />
+              <path d="M8 13h.01" />
+              <path d="M12 13h.01" />
+              <path d="M16 13h.01" />
+              <path d="M8 17h.01" />
+              <path d="M12 17h.01" />
+              <path d="M16 17h.01" />
+            </svg><span class="sidebar-label">Calendário</span></a>
+          <a href="/settings"
+            class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]"
+            aria-label="Conexões" data-tooltip="Conexões"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="h-5 w-5">
+              <path d="M14 17H5" />
+              <path d="M19 7h-9" />
+              <circle cx="17" cy="17" r="3" />
+              <circle cx="7" cy="7" r="3" />
+            </svg><span class="sidebar-label">Conexões</span></a>
+          <a href="/import" aria-current="page"
+            class="inline-flex min-h-11 items-center gap-3 rounded-xl bg-white/10 px-3 text-sm font-semibold text-[#edf5f7] ring-1 ring-inset ring-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]"
+            aria-label="Importar agenda" data-tooltip="Importar agenda"><svg aria-hidden="true" focusable="false"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" class="h-5 w-5">
+              <path d="M12 3v12" />
+              <path d="m17 8-5-5-5 5" />
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            </svg><span class="sidebar-label">Importar agenda</span></a>
         </nav>
-        <form method="post" action="/logout" class="lg:mt-auto"><button aria-label="Sair" data-tooltip="Sair" class="app-btn app-btn-tertiary w-full justify-start text-left"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg><span class="sidebar-label">Sair</span></button></form>
+        <form method="post" action="/logout" class="lg:mt-auto"><button aria-label="Sair" data-tooltip="Sair"
+            class="app-btn app-btn-tertiary w-full justify-start text-left"><svg aria-hidden="true" focusable="false"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" class="h-5 w-5">
+              <path d="m16 17 5-5-5-5" />
+              <path d="M21 12H9" />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            </svg><span class="sidebar-label">Sair</span></button></form>
       </div>
     </aside>
-    <button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="desktop-sidebar" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="m15 18-6-6 6-6"/></svg></button>
-        <main id="main-content" class="min-w-0 px-3 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
-      <header class="mb-6"><h1 class="text-[26px] font-bold tracking-tight text-[#edf5f7]">Importar agenda</h1><p class="mt-2 text-[#a6bbc3]">Carregue um arquivo <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded text-xs">.ics</code> ou <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded text-xs">.zip</code> com múltiplos calendários.</p></header>
+    <button id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" aria-expanded="true"
+      aria-controls="desktop-sidebar" class="app-icon-btn hidden lg:inline-flex"><svg aria-hidden="true"
+        focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" class="h-5 w-5">
+        <path d="m15 18-6-6 6-6" />
+      </svg></button>
+    <main id="main-content" class="min-w-0 px-3 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+      <header class="mb-6">
+        <h1 class="text-[26px] font-bold tracking-tight text-[#edf5f7]">Importar agenda</h1>
+        <p class="mt-2 text-[#a6bbc3]">Carregue um arquivo <code
+            class="bg-[#1b2b33] px-1.5 py-0.5 rounded text-xs">.ics</code> ou <code
+            class="bg-[#1b2b33] px-1.5 py-0.5 rounded text-xs">.zip</code> com múltiplos calendários.</p>
+      </header>
 
-    {% if let Some(s) = status %}
+      {% if let Some(s) = status %}
       <div role="status" aria-live="polite" class="mb-6 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm
-        {% if s == "import_ok" %}border-emerald-700 bg-emerald-950/60 text-emerald-300
-        {% else %}border-rose-700 bg-rose-950/60 text-rose-300{% endif %}">
-        {% if s == "import_ok" %}<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></svg>Importação concluída com sucesso!
-        {% else %}<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>{{ s }}{% endif %}
+        {% if s == " import_ok" %}border-emerald-700 bg-emerald-950/60 text-emerald-300 {% else %}border-rose-700
+        bg-rose-950/60 text-rose-300{% endif %}">
+        {% if s == "import_ok" %}<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="h-5 w-5 shrink-0">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m16 9-5.5 5.5L8 12" />
+        </svg>Importação concluída com sucesso!
+        {% else %}<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>{{ s }}{% endif %}
       </div>
-    {% endif %}
+      {% endif %}
 
-    <section class="bg-[#142027] border border-[#30434c] rounded-2xl p-6 mb-6">
-      <h2 class="text-lg font-semibold text-[#edf5f7] mb-4">Selecionar arquivo</h2>
+      <section class="bg-[#142027] border border-[#30434c] rounded-2xl p-6 mb-6">
+        <h2 class="text-lg font-semibold text-[#edf5f7] mb-4">Selecionar arquivo</h2>
 
-      <form hx-post="/import" hx-target="#import-result" hx-swap="innerHTML"
-            hx-encoding="multipart/form-data"
-            class="space-y-4" enctype="multipart/form-data">
-        <div>
-          <label class="block text-sm text-[#c2d0d5] mb-2" for="calendar_name">Nome da agenda <span class="text-[#829aa2]">(opcional)</span></label>
-          <input type="text" name="calendar_name" id="calendar_name" maxlength="120" placeholder="Usar nome do arquivo"
-                 class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7] focus:outline-none focus:ring-2 focus:ring-brand-500"/>
-        </div>
-        <div>
-          <label class="block text-sm text-[#c2d0d5] mb-2" for="calendar_color">Cor da agenda <span class="text-[#829aa2]">(opcional, formato #RRGGBB)</span></label>
-          <input type="text" name="calendar_color" id="calendar_color" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="Gerar cor exclusiva"
-                 class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7] placeholder:text-[#829aa2] focus:outline-none focus:ring-2 focus:ring-brand-500"/>
-          <p class="text-xs text-[#829aa2] mt-1">Nome e cor personalizados valem para um arquivo individual. A cor deve ser clara e bem distinta das outras agendas. Em .zip, cada agenda usa o nome do arquivo interno e uma cor exclusiva.</p>
-        </div>
-        <div>
-          <label class="block text-sm text-[#c2d0d5] mb-2" for="ics_file">
-            Arquivo iCalendar (.ics, .ical ou similar) ou .zip
-          </label>
-          <input type="file" name="ics_file" id="ics_file" required accept=".ics,.ical,.ifb,.vcs,.zip"
-                 class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7]
+        <form hx-post="/import" hx-target="#import-result" hx-swap="innerHTML" hx-encoding="multipart/form-data"
+          class="space-y-4" enctype="multipart/form-data">
+          <div>
+            <label class="block text-sm text-[#c2d0d5] mb-2" for="calendar_name">Nome da agenda <span
+                class="text-[#829aa2]">(opcional)</span></label>
+            <input type="text" name="calendar_name" id="calendar_name" maxlength="120"
+              placeholder="Usar nome do arquivo"
+              class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7] focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-[#c2d0d5] mb-2" for="calendar_color">Cor da agenda <span
+                class="text-[#829aa2]">(opcional, formato #RRGGBB)</span></label>
+            <input type="text" name="calendar_color" id="calendar_color" maxlength="7" pattern="#[0-9a-fA-F]{6}"
+              placeholder="Gerar cor exclusiva"
+              class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7] placeholder:text-[#829aa2] focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            <p class="text-xs text-[#829aa2] mt-1">Nome e cor personalizados valem para um arquivo individual. A cor
+              deve ser clara e bem distinta das outras agendas. Em .zip, cada agenda usa o nome do arquivo interno e uma
+              cor exclusiva.</p>
+          </div>
+          <div>
+            <label class="block text-sm text-[#c2d0d5] mb-2" for="ics_file">
+              Arquivo iCalendar (.ics, .ical ou similar) ou .zip
+            </label>
+            <input type="file" name="ics_file" id="ics_file" required accept=".ics,.ical,.ifb,.vcs,.zip" class="w-full rounded-lg bg-[#0b1418] border border-[#49606a] px-3 py-2 text-sm text-[#edf5f7]
                         file:mr-4 file:min-h-11 file:px-4 file:rounded-[10px] file:border-0
                         file:bg-[#52d6cd] file:text-[#082a2b] file:text-sm file:font-semibold file:leading-5 file:hover:bg-[#74e4da]
-                        focus:outline-none focus:ring-2 focus:ring-brand-500"/>
-          <p class="text-xs text-[#829aa2] mt-1">
-            Suporta <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ics</code>, <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ical</code>, <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ifb</code> e <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.vcs</code> (arquivo único) ou um <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.zip</code> com múltiplas agendas.
-            Exportações do Google Calendar vêm como .zip — pode enviar direto.
-          </p>
+                        focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            <p class="text-xs text-[#829aa2] mt-1">
+              Suporta <code class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ics</code>, <code
+                class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ical</code>, <code
+                class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.ifb</code> e <code
+                class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.vcs</code> (arquivo único) ou um <code
+                class="bg-[#1b2b33] px-1.5 py-0.5 rounded">.zip</code> com múltiplas agendas.
+              Exportações do Google Calendar vêm como .zip — pode enviar direto.
+            </p>
+          </div>
+
+          <button type="submit" class="app-btn app-btn-primary w-full">
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path d="M12 3v12" />
+              <path d="m17 8-5-5-5 5" />
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            </svg>Importar
+          </button>
+        </form>
+
+        <div id="import-result" class="mt-4 space-y-2"></div>
+      </section>
+
+      <section class="bg-[#142027] border border-[#30434c] rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-[#edf5f7] mb-4">Como exportar dos principais serviços</h2>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <!-- Google -->
+          <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
+            <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                <path d="M8 2v3" />
+                <path d="M16 2v3" />
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M8 13h.01" />
+                <path d="M12 13h.01" />
+                <path d="M16 13h.01" />
+                <path d="M8 17h.01" />
+                <path d="M12 17h.01" />
+                <path d="M16 17h.01" />
+              </svg> Google Calendar
+            </h3>
+            <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
+              <li>Acesse <a class="text-brand-400 hover:underline" href="https://calendar.google.com"
+                  target="_blank">calendar.google.com</a> no computador</li>
+              <li>Engrenagem Menu Configurações → Importar → Importar e exportar</li>
+              <li>Seção "Exportar" → clique <b>Exportar</b></li>
+              <li>Baixa um <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code> com um <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code> por agenda</li>
+              <li>Envie o <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code> aqui direto</li>
+            </ol>
+          </div>
+
+          <!-- Outlook / Microsoft 365 -->
+          <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
+            <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                <path d="M8 2v3" />
+                <path d="M16 2v3" />
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M8 13h.01" />
+                <path d="M12 13h.01" />
+                <path d="M16 13h.01" />
+                <path d="M8 17h.01" />
+                <path d="M12 17h.01" />
+                <path d="M16 17h.01" />
+              </svg> Outlook / Microsoft 365
+            </h3>
+            <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
+              <li>Acesse <a class="text-brand-400 hover:underline" href="https://outlook.office.com/calendar"
+                  target="_blank">outlook.office.com</a></li>
+              <li>Engrenagem Menu Configurações → Calendário → Calendários compartilhados</li>
+              <li>Seção "Publicar calendário" → escolha a agenda</li>
+              <li>Permissão: <b>Pode ver todos os detalhes</b> → Publicar</li>
+              <li>Copie o link <b>ICS</b>, abra no navegador → baixa <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
+              <li>Ou no Outlook desktop clássico: Arquivo → Salvar Calendário → <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
+            </ol>
+          </div>
+
+          <!-- Apple / iCloud -->
+          <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
+            <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                <path d="M8 2v3" />
+                <path d="M16 2v3" />
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M8 13h.01" />
+                <path d="M12 13h.01" />
+                <path d="M16 13h.01" />
+                <path d="M8 17h.01" />
+                <path d="M12 17h.01" />
+                <path d="M16 17h.01" />
+              </svg> Apple Calendar (iCloud)
+            </h3>
+            <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
+              <li>Acesse <a class="text-brand-400 hover:underline" href="https://www.icloud.com/calendar"
+                  target="_blank">icloud.com/calendar</a></li>
+              <li>Calendário → botão de compartilhar → <b>Calendário público</b></li>
+              <li>Copie o link (começa com <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">webcal://</code>)
+              </li>
+              <li>Cole no navegador trocando para <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">https://</code> → baixa <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
+              <li>Ou no app Calendário no Mac: Arquivo → Exportar → <code
+                  class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
+            </ol>
+          </div>
+
+          <!-- Genérico -->
+          <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
+            <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                <path d="M12 3v12" />
+                <path d="m17 8-5-5-5 5" />
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              </svg> Outro arquivo .ics
+            </h3>
+            <p class="text-sm text-[#c2d0d5]">
+              Qualquer app que exporte <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code> (iCal,
+              vCalendar) funciona.
+              Se vier em <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code>, envie o zip inteiro.
+            </p>
+          </div>
         </div>
+      </section>
 
-        <button type="submit"
-                class="app-btn app-btn-primary w-full">
-          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Importar
-        </button>
-      </form>
-
-      <div id="import-result" class="mt-4 space-y-2"></div>
-    </section>
-
-    <section class="bg-[#142027] border border-[#30434c] rounded-2xl p-6">
-      <h2 class="text-lg font-semibold text-[#edf5f7] mb-4">Como exportar dos principais serviços</h2>
-
-      <div class="grid gap-4 md:grid-cols-2">
-        <!-- Google -->
-        <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
-          <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg> Google Calendar
-          </h3>
-          <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
-            <li>Acesse <a class="text-brand-400 hover:underline" href="https://calendar.google.com" target="_blank">calendar.google.com</a> no computador</li>
-            <li>Engrenagem Menu Configurações → Importar → Importar e exportar</li>
-            <li>Seção "Exportar" → clique <b>Exportar</b></li>
-            <li>Baixa um <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code> com um <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code> por agenda</li>
-            <li>Envie o <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code> aqui direto</li>
-          </ol>
-        </div>
-
-        <!-- Outlook / Microsoft 365 -->
-        <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
-          <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg> Outlook / Microsoft 365
-          </h3>
-          <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
-            <li>Acesse <a class="text-brand-400 hover:underline" href="https://outlook.office.com/calendar" target="_blank">outlook.office.com</a></li>
-            <li>Engrenagem Menu Configurações → Calendário → Calendários compartilhados</li>
-            <li>Seção "Publicar calendário" → escolha a agenda</li>
-            <li>Permissão: <b>Pode ver todos os detalhes</b> → Publicar</li>
-            <li>Copie o link <b>ICS</b>, abra no navegador → baixa <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
-            <li>Ou no Outlook desktop clássico: Arquivo → Salvar Calendário → <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
-          </ol>
-        </div>
-
-        <!-- Apple / iCloud -->
-        <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
-          <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg> Apple Calendar (iCloud)
-          </h3>
-          <ol class="text-sm text-[#c2d0d5] space-y-1 list-decimal list-inside">
-            <li>Acesse <a class="text-brand-400 hover:underline" href="https://www.icloud.com/calendar" target="_blank">icloud.com/calendar</a></li>
-            <li>Calendário → botão de compartilhar → <b>Calendário público</b></li>
-            <li>Copie o link (começa com <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">webcal://</code>)</li>
-            <li>Cole no navegador trocando para <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">https://</code> → baixa <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
-            <li>Ou no app Calendário no Mac: Arquivo → Exportar → <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code></li>
-          </ol>
-        </div>
-
-        <!-- Genérico -->
-        <div class="bg-[#1b2b33] rounded-xl p-4 border border-[#49606a]">
-          <h3 class="font-medium text-[#edf5f7] flex items-center gap-2 mb-2">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg> Outro arquivo .ics
-          </h3>
-          <p class="text-sm text-[#c2d0d5]">
-            Qualquer app que exporte <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.ics</code> (iCal, vCalendar) funciona.
-            Se vier em <code class="bg-[#142027] px-1.5 py-0.5 rounded text-xs">.zip</code>, envie o zip inteiro.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <p class="mt-6 text-center text-xs text-[#829aa2]">
-      <a href="/" class="text-brand-400 hover:underline">← Voltar ao calendário</a>
-    </p>
+      <p class="mt-6 text-center text-xs text-[#829aa2]">
+        <!-- <a href="/" class="text-brand-400 hover:underline">← Voltar ao calendário</a> -->
+      </p>
     </main>
   </div>
   <div id="sidebar-tooltip" role="tooltip" hidden></div>
@@ -215,61 +571,61 @@
     });
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const appShell = document.getElementById('app-shell');
-      const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';
-      appShell.setAttribute('data-sidebar-collapsed', String(initialCollapsed));
-      sidebarToggle.setAttribute('aria-expanded', String(!initialCollapsed));
-      sidebarToggle.setAttribute('aria-label', initialCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral');
+    const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';
+    appShell.setAttribute('data-sidebar-collapsed', String(initialCollapsed));
+    sidebarToggle.setAttribute('aria-expanded', String(!initialCollapsed));
+    sidebarToggle.setAttribute('aria-label', initialCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral');
 
-      const sidebarTooltip = document.getElementById('sidebar-tooltip');
-      const sidebarItems = document.querySelectorAll('#desktop-sidebar [data-tooltip]');
-      let activeSidebarItem = null;
-      function positionSidebarTooltip() {
-        if (!activeSidebarItem) {
-          sidebarTooltip.hidden = true;
-          return;
-        }
-        if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) {
-          activeSidebarItem.removeAttribute('aria-describedby');
-          activeSidebarItem = null;
-          sidebarTooltip.hidden = true;
-          return;
-        }
-        sidebarTooltip.textContent = activeSidebarItem.dataset.tooltip;
-        sidebarTooltip.hidden = false;
-        const target = activeSidebarItem.getBoundingClientRect();
-        const tip = sidebarTooltip.getBoundingClientRect();
-        sidebarTooltip.style.left = Math.max(8, Math.min(target.right + 8, window.innerWidth - tip.width - 8)) + 'px';
-        sidebarTooltip.style.top = Math.max(8, Math.min(target.top + target.height / 2 - tip.height / 2, window.innerHeight - tip.height - 8)) + 'px';
+    const sidebarTooltip = document.getElementById('sidebar-tooltip');
+    const sidebarItems = document.querySelectorAll('#desktop-sidebar [data-tooltip]');
+    let activeSidebarItem = null;
+    function positionSidebarTooltip() {
+      if (!activeSidebarItem) {
+        sidebarTooltip.hidden = true;
+        return;
       }
-      function showSidebarTooltip(item) {
-        if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) return;
-        if (activeSidebarItem && activeSidebarItem !== item) activeSidebarItem.removeAttribute('aria-describedby');
-        activeSidebarItem = item;
-        item.setAttribute('aria-describedby', 'sidebar-tooltip');
-        positionSidebarTooltip();
+      if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) {
+        activeSidebarItem.removeAttribute('aria-describedby');
+        activeSidebarItem = null;
+        sidebarTooltip.hidden = true;
+        return;
       }
-      function hideSidebarTooltip(item) {
-        if (item.matches(':hover') || document.activeElement === item) return;
-        item.removeAttribute('aria-describedby');
-        if (activeSidebarItem === item) {
-          activeSidebarItem = null;
-          sidebarTooltip.hidden = true;
-        }
+      sidebarTooltip.textContent = activeSidebarItem.dataset.tooltip;
+      sidebarTooltip.hidden = false;
+      const target = activeSidebarItem.getBoundingClientRect();
+      const tip = sidebarTooltip.getBoundingClientRect();
+      sidebarTooltip.style.left = Math.max(8, Math.min(target.right + 8, window.innerWidth - tip.width - 8)) + 'px';
+      sidebarTooltip.style.top = Math.max(8, Math.min(target.top + target.height / 2 - tip.height / 2, window.innerHeight - tip.height - 8)) + 'px';
+    }
+    function showSidebarTooltip(item) {
+      if (appShell.getAttribute('data-sidebar-collapsed') !== 'true' || window.innerWidth < 1024) return;
+      if (activeSidebarItem && activeSidebarItem !== item) activeSidebarItem.removeAttribute('aria-describedby');
+      activeSidebarItem = item;
+      item.setAttribute('aria-describedby', 'sidebar-tooltip');
+      positionSidebarTooltip();
+    }
+    function hideSidebarTooltip(item) {
+      if (item.matches(':hover') || document.activeElement === item) return;
+      item.removeAttribute('aria-describedby');
+      if (activeSidebarItem === item) {
+        activeSidebarItem = null;
+        sidebarTooltip.hidden = true;
       }
-      sidebarItems.forEach(item => {
-        item.addEventListener('pointerenter', () => showSidebarTooltip(item));
-        item.addEventListener('pointerleave', () => hideSidebarTooltip(item));
-        item.addEventListener('focus', () => showSidebarTooltip(item));
-        item.addEventListener('blur', () => hideSidebarTooltip(item));
-      });
-      window.addEventListener('resize', positionSidebarTooltip);
-      document.getElementById('desktop-sidebar').addEventListener('scroll', positionSidebarTooltip);
+    }
+    sidebarItems.forEach(item => {
+      item.addEventListener('pointerenter', () => showSidebarTooltip(item));
+      item.addEventListener('pointerleave', () => hideSidebarTooltip(item));
+      item.addEventListener('focus', () => showSidebarTooltip(item));
+      item.addEventListener('blur', () => hideSidebarTooltip(item));
+    });
+    window.addEventListener('resize', positionSidebarTooltip);
+    document.getElementById('desktop-sidebar').addEventListener('scroll', positionSidebarTooltip);
     sidebarToggle.addEventListener('click', () => {
       const collapsed = appShell.getAttribute('data-sidebar-collapsed') !== 'true';
       appShell.setAttribute('data-sidebar-collapsed', String(collapsed));
-    document.documentElement.dataset.sidebarCollapsed = String(collapsed);
-    try { localStorage.setItem('wecal-sidebar-collapsed', String(collapsed)); } catch (_) {}
-    if (!collapsed && activeSidebarItem) { activeSidebarItem.removeAttribute('aria-describedby'); activeSidebarItem = null; sidebarTooltip.hidden = true; }
+      document.documentElement.dataset.sidebarCollapsed = String(collapsed);
+      try {localStorage.setItem('wecal-sidebar-collapsed', String(collapsed));} catch (_) { }
+      if (!collapsed && activeSidebarItem) {activeSidebarItem.removeAttribute('aria-describedby'); activeSidebarItem = null; sidebarTooltip.hidden = true;}
       sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
       const label = collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral';
       sidebarToggle.setAttribute('aria-label', label);
@@ -278,4 +634,5 @@
 
   </script>
 </body>
+
 </html>

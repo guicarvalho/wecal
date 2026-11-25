@@ -17,6 +17,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY Cargo.toml ./
 COPY src ./src
 COPY templates ./templates
+COPY assets ./assets
 COPY migrations ./migrations
 
 ENV DEBIAN_FRONTEND=noninteractive
