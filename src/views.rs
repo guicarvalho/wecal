@@ -16,6 +16,10 @@ pub struct LoginTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "presentation.html")]
+pub struct PresentationTemplate;
+
+#[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
     pub events: Vec<MergedEvent>,

@@ -29,7 +29,7 @@ use wecal::merge_engine::{merge_events, AppleEvent, EventSource, GoogleEvent, Me
 use wecal::sync::{import_ics_file, import_zip_file, is_supported_calendar_file, sync_all, ImportOutcome};
 use wecal::views::{
     CalendarLegend, EventListTemplate, IndexTemplate, LoginTemplate, SettingsTemplate, SyncOutcomeView,
-    SyncStatusTemplate,
+    PresentationTemplate, SyncStatusTemplate,
 };
 
 #[derive(Clone)]
@@ -92,6 +92,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/login", get(login_page_handler).post(login_post_handler))
         .route("/logout", post(logout_handler))
         .route("/", get(index_handler))
+        .route("/apresentacao", get(presentation_handler))
+        .route("/assets/presentation-week.png", get(presentation_week_asset))
+        .route(
+            "/assets/presentation-week-mobile.png",
+            get(presentation_week_mobile_asset),
+        )
+        .route("/assets/presentation-month.png", get(presentation_month_asset))
+        .route("/assets/presentation-event.png", get(presentation_event_asset))
         .route("/events", get(events_fragment_handler))
         .route("/api/events", get(events_json_handler))
         .route("/health", get(|| async { StatusCode::OK }))
@@ -194,7 +202,12 @@ async fn logout_handler(State(state): State<AppState>) -> Response {
 
 async fn auth_middleware(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let path = request.uri().path();
-    if path == "/login" || path == "/health" {
+    if path == "/"
+        || path == "/apresentacao"
+        || path.starts_with("/assets/presentation-")
+        || path == "/login"
+        || path == "/health"
+    {
         return next.run(request).await;
     }
 
@@ -461,7 +474,13 @@ async fn fetch_merged_events(
 // Handlers da timeline
 // ------------------------------------------------------------------
 
-async fn index_handler(State(state): State<AppState>) -> AppResult<Html<String>> {
+async fn index_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> AppResult<Html<String>> {
+    if !session_is_valid(&headers, &state.config) {
+        return Ok(Html(PresentationTemplate.render()?));
+    }
     let events = fetch_merged_events(&state.pool, None).await?;
     let calendars = sqlx::query_as::<_, (String, String)>(
         "SELECT calendar_name, calendar_color FROM wecal_import_calendars ORDER BY calendar_name",
@@ -473,6 +492,37 @@ async fn index_handler(State(state): State<AppState>) -> AppResult<Html<String>>
     .collect();
     let html = IndexTemplate { events, calendars }.render()?;
     Ok(Html(html))
+}
+
+async fn presentation_handler() -> AppResult<Html<String>> {
+    Ok(Html(PresentationTemplate.render()?))
+}
+
+async fn presentation_week_asset() -> Response {
+    presentation_asset(include_bytes!("../assets/presentation-week.png"))
+}
+
+async fn presentation_week_mobile_asset() -> Response {
+    presentation_asset(include_bytes!("../assets/presentation-week-mobile.png"))
+}
+
+async fn presentation_month_asset() -> Response {
+    presentation_asset(include_bytes!("../assets/presentation-month.png"))
+}
+
+async fn presentation_event_asset() -> Response {
+    presentation_asset(include_bytes!("../assets/presentation-event.png"))
+}
+
+fn presentation_asset(bytes: &'static [u8]) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        bytes,
+    )
+        .into_response()
 }
 
 async fn events_fragment_handler(State(state): State<AppState>) -> AppResult<Html<String>> {
