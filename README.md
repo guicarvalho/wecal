@@ -14,8 +14,31 @@ ical 0.11 (feed Apple). Docker multi-stage com cargo-chef.
 ```bash
 cp .env.example .env
 # Preencha APP_ACCESS_KEY e API_ACCESS_KEYS com chaves aleatórias (openssl rand -hex 32)
-docker compose up --build
+docker compose -f docker-compose.yml up --build
 ```
+
+### Deploy automatizado
+
+O GitHub Actions compila e testa cada PR para `main`. Após um push em `main`,
+publica na VPS somente se a validação passar. O workflow também aceita execução
+manual pela aba Actions, na branch `main`.
+
+Antes do primeiro deploy, prepare a VPS conforme `infra-vps/docs/nova-aplicacao.md`:
+
+1. Crie os recursos isolados `wecal` e clone este repositório em `/srv/apps/wecal`.
+2. Crie `/srv/apps/wecal/.env` com permissão `0600`, definindo `DATABASE_URL`
+   para o PostgreSQL compartilhado, `APP_BASE_URL` com a URL HTTPS pública,
+   `APP_ACCESS_KEY`, `API_ACCESS_KEYS` e, se necessário, as credenciais Google.
+   O aplicativo executa suas migrations ao iniciar.
+3. Configure o Caddy para encaminhar o domínio a `wecal-app:3000` e ajuste o DNS.
+4. Cadastre uma chave SSH exclusiva para o CI, restrita ao comando
+   `deploy-app wecal`, conforme o guia da infraestrutura.
+5. No ambiente GitHub `production`, configure as variáveis `VPS_HOST` e
+   `VPS_KNOWN_HOSTS` e o segredo `VPS_DEPLOY_KEY`. A chave de host deve ser
+   verificada pela console da VPS antes de ser cadastrada.
+
+O arquivo `compose.yaml` é destinado à VPS e usa as redes externas `vps_web` e
+`vps_private`. Para desenvolvimento local, use explicitamente `docker-compose.yml`.
 
 - App: http://localhost:3001 — pede a chave definida em `APP_ACCESS_KEY`
 - API JSON: `GET /api/events` com `Authorization: Bearer <chave>` de `API_ACCESS_KEYS`
@@ -93,7 +116,7 @@ Tudo em **http://localhost:3001/settings** (botão "⚙️ Conexões" no topo da
 5. Copie para o `.env` na raiz (veja `.env.example`) e reinicie:
    ```bash
    cp .env.example .env   # preencha GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET
-   docker compose up -d
+   docker compose -f docker-compose.yml up -d
    ```
 6. Clique em **Conectar** na página de conexões — pronto, sync automático a cada 15 min.
 
