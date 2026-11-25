@@ -6,7 +6,7 @@ services:
     expose: ["3000"]
     networks:
       web:
-        aliases: [wecal-web]
+        aliases: [wecal-app]
       private: {}
 
 networks:

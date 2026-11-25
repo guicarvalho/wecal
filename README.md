@@ -30,7 +30,7 @@ Antes do primeiro deploy, prepare a VPS conforme `infra-vps/docs/nova-aplicacao.
    para o PostgreSQL compartilhado, `APP_BASE_URL` com a URL HTTPS pública,
    `APP_ACCESS_KEY`, `API_ACCESS_KEYS` e, se necessário, as credenciais Google.
    O aplicativo executa suas migrations ao iniciar.
-3. Configure o Caddy para encaminhar o domínio a `wecal-web:3000` e ajuste o DNS.
+3. Configure o Caddy para encaminhar o domínio a `wecal-app:3000` e ajuste o DNS.
 4. Cadastre uma chave SSH exclusiva para o CI, restrita ao comando
    `deploy-app wecal`, conforme o guia da infraestrutura.
 5. No ambiente GitHub `production`, configure as variáveis `VPS_HOST` e
