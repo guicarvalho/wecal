@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <script>try { if (localStorage.getItem("wecal-sidebar-collapsed") === "true") document.documentElement.dataset.sidebarCollapsed = "true"; } catch (_) {}</script>
   <meta name="theme-color" content="#0b1418"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <link rel="apple-touch-icon" href="/assets/icon-192.png"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
   <title>WeCal — Sua agenda a dois</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1' y='1' width='22' height='22' rx='5' fill='%23102329'/%3E%3Crect x='4' y='4' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='10' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='4' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='10' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1' fill='%2352d6cd'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='4' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='10' y='16' width='4' height='4' rx='1' fill='%2330434c'/%3E%3Crect x='16' y='16' width='4' height='4' rx='1' fill='%2374e4da'/%3E%3C/svg%3E"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -76,6 +79,7 @@
       --fc-monarch-selected-down: #46c4bc;
     }
     .app-btn{box-sizing:border-box;min-height:44px;padding:0 16px;border:1px solid transparent;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14px/20px Manrope,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:background-color .15s,border-color .15s,color .15s;cursor:pointer}
+    .app-btn[hidden]{display:none}
     .app-btn:focus-visible,.app-icon-btn:focus-visible{outline:2px solid #8dece4;outline-offset:2px}.app-btn:disabled{opacity:.6;cursor:not-allowed}
     .app-btn-primary{background:#52d6cd;color:#082a2b}.app-btn-primary:hover{background:#74e4da}
     .app-btn-secondary{background:#1b2b33;border-color:#49606a;color:#edf5f7}.app-btn-secondary:hover{background:#223a43}
@@ -141,6 +145,8 @@
             <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg><span class="sidebar-label">Conexões</span></a>
           <a href="/import" class="inline-flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#a6bbc3] transition-colors hover:bg-[#223a43] hover:text-[#edf5f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8dece4]" aria-label="Importar agenda" data-tooltip="Importar agenda">
             <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg><span class="sidebar-label">Importar agenda</span></a>
+          <button id="install-app" type="button" hidden class="app-btn app-btn-secondary w-full justify-start">Instalar aplicativo</button>
+          <p id="install-ios-help" hidden class="text-sm text-[#a6bbc3]">No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.</p>
         </nav>
 
         <section aria-label="Agendas conectadas">
@@ -262,6 +268,46 @@
         datesSet: function () { hidePopover(); }
       });
       calendar.render();
+      var touchStart = null;
+      calendarSection.addEventListener('touchstart', function (event) {
+        if (event.touches.length !== 1 || event.target.closest('button, a, input, select, textarea')) {
+          touchStart = null;
+          return;
+        }
+        touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+      }, { passive: true });
+      calendarSection.addEventListener('touchend', function (event) {
+        if (!touchStart || event.changedTouches.length !== 1) return;
+        var dx = event.changedTouches[0].clientX - touchStart.x;
+        var dy = event.changedTouches[0].clientY - touchStart.y;
+        touchStart = null;
+        if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) calendar.next(); else calendar.prev();
+        }
+      }, { passive: true });
+      calendarSection.addEventListener('touchcancel', function () { touchStart = null; }, { passive: true });
+
+      var installButton = document.getElementById('install-app');
+      var installPrompt = null;
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        installPrompt = event;
+        installButton.hidden = false;
+      });
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone) {
+        installButton.hidden = false;
+      }
+      installButton.addEventListener('click', async function () {
+        if (!installPrompt) {
+          document.getElementById('install-ios-help').hidden = false;
+          return;
+        }
+        await installPrompt.prompt();
+        installPrompt = null;
+        installButton.hidden = true;
+      });
+      window.addEventListener('appinstalled', function () { installButton.hidden = true; });
       var sidebarToggle = document.getElementById('sidebar-toggle');
       var appShell = document.getElementById('app-shell');
       const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';

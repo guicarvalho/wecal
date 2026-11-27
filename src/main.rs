@@ -93,6 +93,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/logout", post(logout_handler))
         .route("/", get(index_handler))
         .route("/apresentacao", get(presentation_handler))
+        .route("/manifest.webmanifest", get(|| async { ([(header::CONTENT_TYPE, "application/manifest+json")], include_str!("../assets/manifest.webmanifest")) }))
+        .route("/sw.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript"), (header::CACHE_CONTROL, "no-cache")], include_str!("../assets/sw.js")) }))
+        .route("/assets/icon-192.png", get(|| async { presentation_asset(include_bytes!("../assets/icon-192.png")) }))
+        .route("/assets/icon-512.png", get(|| async { presentation_asset(include_bytes!("../assets/icon-512.png")) }))
         .route("/assets/presentation-week.png", get(presentation_week_asset))
         .route(
             "/assets/presentation-week-mobile.png",
@@ -206,6 +210,10 @@ async fn auth_middleware(State(state): State<AppState>, request: Request, next: 
     if path == "/"
         || path == "/apresentacao"
         || path.starts_with("/assets/presentation-")
+        || path == "/manifest.webmanifest"
+        || path == "/sw.js"
+        || path == "/assets/icon-192.png"
+        || path == "/assets/icon-512.png"
         || path == "/login"
         || path == "/health"
     {
