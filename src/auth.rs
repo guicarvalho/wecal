@@ -57,7 +57,7 @@ pub fn build_auth_url(cfg: &Config, state: &str, pkce: &Pkce) -> String {
          &code_challenge={challenge}\
          &code_challenge_method=S256\
          &access_type=offline\
-         &prompt=consent\
+         &prompt=select_account%20consent\
          &include_granted_scopes=true",
         redirect = urlencoding(&cfg.google_redirect_uri()),
         scope = urlencoding(GOOGLE_SCOPE),
@@ -120,14 +120,26 @@ pub async fn exchange_code(
     let tokens: TokenResponse =
         serde_json::from_str(&body).context("resposta inválida do Google")?;
 
+    let calendar_id = primary_calendar_id(&tokens.access_token).await?;
+    if let Some(legacy_id) = sqlx::query_scalar::<_, uuid::Uuid>(
+        "SELECT id FROM wecal_connections WHERE provider = 'google' AND google_calendar_id IS NULL"
+    ).fetch_optional(pool).await? {
+        if let Ok(legacy_token) = ensure_access_token(pool, cfg, legacy_id).await {
+            if let Ok(legacy_calendar) = primary_calendar_id(&legacy_token).await {
+                sqlx::query("UPDATE wecal_connections SET google_calendar_id = $1, calendar_name = $1 WHERE id = $2")
+                    .bind(legacy_calendar).bind(legacy_id).execute(pool).await?;
+            }
+        }
+    }
+
     let expires_at = Utc::now() + Duration::seconds(tokens.expires_in.unwrap_or(3600));
     let has_new_refresh = tokens.refresh_token.is_some();
 
     sqlx::query(
         r#"
-        INSERT INTO wecal_connections (provider, access_token, refresh_token, expires_at, calendar_name, last_error)
-        VALUES ('google', $1, $2, $3, 'Google Calendar', NULL)
-        ON CONFLICT (provider) DO UPDATE SET
+        INSERT INTO wecal_connections (provider, access_token, refresh_token, expires_at, calendar_name, google_calendar_id, last_error)
+        VALUES ('google', $1, $2, $3, $4, $4, NULL)
+        ON CONFLICT (google_calendar_id) WHERE provider = 'google' DO UPDATE SET
             access_token  = EXCLUDED.access_token,
             refresh_token = COALESCE(EXCLUDED.refresh_token, wecal_connections.refresh_token),
             expires_at    = EXCLUDED.expires_at,
@@ -138,6 +150,7 @@ pub async fn exchange_code(
     .bind(&tokens.access_token)
     .bind(&tokens.refresh_token)
     .bind(expires_at)
+    .bind(&calendar_id)
     .execute(pool)
     .await
     .context("falha ao salvar conexão Google")?;
@@ -151,10 +164,11 @@ pub async fn exchange_code(
 
 /// Garante um access token válido para a conexão Google; renova via refresh
 /// token quando necessário. Retorna o access_token atual.
-pub async fn ensure_access_token(pool: &PgPool, cfg: &Config) -> anyhow::Result<String> {
+pub async fn ensure_access_token(pool: &PgPool, cfg: &Config, connection_id: uuid::Uuid) -> anyhow::Result<String> {
     let row: (Option<String>, Option<chrono::DateTime<Utc>>) = sqlx::query_as(
-        "SELECT access_token, expires_at FROM wecal_connections WHERE provider = 'google'",
+        "SELECT access_token, expires_at FROM wecal_connections WHERE id = $1 AND provider = 'google'",
     )
+    .bind(connection_id)
     .fetch_optional(pool)
     .await?
     .context("Google não está conectado")?;
@@ -166,8 +180,9 @@ pub async fn ensure_access_token(pool: &PgPool, cfg: &Config) -> anyhow::Result<
     }
 
     let refresh_token = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT refresh_token FROM wecal_connections WHERE provider = 'google'",
+        "SELECT refresh_token FROM wecal_connections WHERE id = $1 AND provider = 'google'",
     )
+    .bind(connection_id)
     .fetch_optional(pool)
     .await?
     .flatten()
@@ -201,12 +216,23 @@ pub async fn ensure_access_token(pool: &PgPool, cfg: &Config) -> anyhow::Result<
     let expires_at = Utc::now() + Duration::seconds(tokens.expires_in.unwrap_or(3600));
 
     sqlx::query(
-        "UPDATE wecal_connections SET access_token = $1, expires_at = $2, updated_at = now() WHERE provider = 'google'",
+        "UPDATE wecal_connections SET access_token = $1, expires_at = $2, updated_at = now() WHERE id = $3 AND provider = 'google'",
     )
     .bind(&tokens.access_token)
     .bind(expires_at)
+    .bind(connection_id)
     .execute(pool)
     .await?;
 
     Ok(tokens.access_token)
+}
+
+#[derive(Deserialize)]
+struct PrimaryCalendar { id: String }
+
+pub async fn primary_calendar_id(token: &str) -> anyhow::Result<String> {
+    let calendar: PrimaryCalendar = reqwest::Client::new()
+        .get("https://www.googleapis.com/calendar/v3/calendars/primary")
+        .bearer_auth(token).send().await?.error_for_status()?.json().await?;
+    Ok(calendar.id)
 }

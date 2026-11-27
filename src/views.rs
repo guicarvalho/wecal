@@ -41,12 +41,23 @@ pub struct EventListTemplate {
 // Página de conexões (Google OAuth + Apple .ics)
 // ------------------------------------------------------------------
 
+pub struct GoogleAccount {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub last_sync: Option<String>,
+    pub has_error: bool,
+}
+pub struct ImportedCalendar {
+    pub filename: String,
+    pub name: String,
+}
+
 #[derive(Template)]
 #[template(path = "settings.html")]
 pub struct SettingsTemplate {
     pub google_configured: bool,
-    pub google_connected: bool,
-    pub google_last_sync: Option<String>,
+    pub google_accounts: Vec<GoogleAccount>,
+    pub imported_calendars: Vec<ImportedCalendar>,
     pub apple_connected: bool,
     pub apple_url: Option<String>,
     pub apple_last_sync: Option<String>,
