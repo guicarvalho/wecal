@@ -33,8 +33,18 @@ pub struct SyncOutcome {
 pub async fn sync_all(pool: &PgPool, cfg: &Config) -> Vec<SyncOutcome> {
     let mut report = Vec::new();
 
-    match sync_google(pool, cfg).await {
-        Ok(n) => report.push(ok("Google", format!("{n} eventos sincronizados"))),
+    match sqlx::query_as::<_, (uuid::Uuid, Option<String>)>("SELECT id, calendar_name FROM wecal_connections WHERE provider = 'google' ORDER BY created_at").fetch_all(pool).await {
+        Ok(connections) => for (id, name) in connections {
+            let label = name.unwrap_or_else(|| "Google".into());
+            match sync_google(pool, cfg, id).await {
+                Ok(n) => report.push(ok(&label, format!("{n} eventos sincronizados"))),
+                Err(e) => {
+                    if let Err(update_error) = sqlx::query("UPDATE wecal_connections SET last_error = 'Falha na sincronização' WHERE id = $1")
+                        .bind(id).execute(pool).await { eprintln!("falha ao registrar erro de sincronização: {update_error}"); }
+                    report.push(err(&label, e));
+                },
+            }
+        },
         Err(e) => report.push(err("Google", e)),
     }
 
@@ -100,12 +110,15 @@ struct GList {
     next_page_token: Option<String>,
 }
 
-async fn sync_google(pool: &PgPool, cfg: &Config) -> anyhow::Result<usize> {
+async fn sync_google(pool: &PgPool, cfg: &Config, connection_id: uuid::Uuid) -> anyhow::Result<usize> {
     if !cfg.google_configured() {
         bail!("GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET não configurados");
     }
-    let token = auth::ensure_access_token(pool, cfg).await?;
+    let token = auth::ensure_access_token(pool, cfg, connection_id).await?;
     let client = reqwest::Client::new();
+    let calendar_id = auth::primary_calendar_id(&token).await?;
+    sqlx::query("UPDATE wecal_connections SET google_calendar_id = $1, calendar_name = $1 WHERE id = $2 AND google_calendar_id IS NULL")
+        .bind(&calendar_id).bind(connection_id).execute(pool).await?;
 
     // Janela: 90 dias no passado até 1 ano no futuro (fase 1 — sem syncToken)
     let time_min = (Utc::now() - Duration::days(90)).to_rfc3339();
@@ -165,7 +178,7 @@ async fn sync_google(pool: &PgPool, cfg: &Config) -> anyhow::Result<usize> {
             title = format!("⚠ Provisório · {title}");
         }
         rows.push((
-            ev.id,
+            format!("{connection_id}::{}", ev.id),
             title,
             ev.description,
             start,
@@ -175,7 +188,7 @@ async fn sync_google(pool: &PgPool, cfg: &Config) -> anyhow::Result<usize> {
         ));
     }
 
-    commit_sync(pool, "google", rows).await
+    commit_sync(pool, "google", Some(connection_id), rows).await
 }
 
 /// Resolve a janela (start, end) de um evento Google, incluindo all-day (date).
@@ -237,7 +250,7 @@ async fn sync_apple_ics(pool: &PgPool) -> anyhow::Result<usize> {
     let body = resp.bytes().await.context("corpo do .ics ilegível")?;
 
     let rows = parse_ics(&body)?;
-    commit_sync(pool, "apple", rows).await
+    commit_sync(pool, "apple", None, rows).await
 }
 
 /// Parseia um feed iCalendar em linhas de evento (external_id = UID).
@@ -671,14 +684,20 @@ type EventRow = (
     bool,
 );
 
-async fn commit_sync(pool: &PgPool, provider: &str, rows: Vec<EventRow>) -> anyhow::Result<usize> {
+async fn commit_sync(pool: &PgPool, provider: &str, connection_id: Option<uuid::Uuid>, rows: Vec<EventRow>) -> anyhow::Result<usize> {
     let mut tx: Transaction<'_, Postgres> = pool.begin().await?;
+
+    if let Some(id) = connection_id {
+        sqlx::query("SELECT id FROM wecal_connections WHERE id = $1 AND provider = 'google' FOR UPDATE")
+            .bind(id).fetch_one(&mut *tx).await?;
+    }
 
     // Marca tudo do provedor como "não visto nesta rodada"
     sqlx::query(
-        "UPDATE wecal_events SET synced_at = NULL WHERE provider = $1 AND external_id IS NOT NULL",
+        "UPDATE wecal_events SET synced_at = NULL WHERE provider = $1 AND external_id IS NOT NULL AND connection_id IS NOT DISTINCT FROM $2",
     )
     .bind(provider)
+    .bind(connection_id)
     .execute(&mut *tx)
     .await?;
 
@@ -686,8 +705,8 @@ async fn commit_sync(pool: &PgPool, provider: &str, rows: Vec<EventRow>) -> anyh
         sqlx::query(
             r#"
             INSERT INTO wecal_events
-                (provider, external_id, title, description, start_at, end_at, is_private, is_transparent, synced_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+                (provider, external_id, title, description, start_at, end_at, is_private, is_transparent, synced_at, connection_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
             ON CONFLICT (provider, external_id) DO UPDATE SET
                 title       = EXCLUDED.title,
                 description = EXCLUDED.description,
@@ -707,24 +726,27 @@ async fn commit_sync(pool: &PgPool, provider: &str, rows: Vec<EventRow>) -> anyh
         .bind(end)
         .bind(is_private)
         .bind(is_transparent)
+        .bind(connection_id)
         .execute(&mut *tx)
         .await?;
     }
 
     // Remove eventos que o provedor não devolveu mais
     let stale = sqlx::query(
-        "DELETE FROM wecal_events WHERE provider = $1 AND external_id IS NOT NULL AND synced_at IS NULL",
+        "DELETE FROM wecal_events WHERE provider = $1 AND external_id IS NOT NULL AND synced_at IS NULL AND connection_id IS NOT DISTINCT FROM $2",
     )
     .bind(provider)
+    .bind(connection_id)
     .execute(&mut *tx)
     .await?
     .rows_affected();
 
     // Sucesso: registra o horário e limpa o último erro
     sqlx::query(
-        "UPDATE wecal_connections SET last_sync_at = now(), last_error = NULL, updated_at = now() WHERE provider = $1",
+        "UPDATE wecal_connections SET last_sync_at = now(), last_error = NULL, updated_at = now() WHERE provider = $1 AND ($2::uuid IS NULL OR id = $2)",
     )
     .bind(if provider == "apple" { "apple_ics" } else { provider })
+    .bind(connection_id)
     .execute(&mut *tx)
     .await?;
 

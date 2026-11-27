@@ -29,7 +29,7 @@ use wecal::merge_engine::{merge_events, AppleEvent, EventSource, GoogleEvent, Me
 use wecal::sync::{import_ics_file, import_zip_file, is_supported_calendar_file, sync_all, ImportOutcome};
 use wecal::views::{
     CalendarLegend, EventListTemplate, IndexTemplate, LoginTemplate, SettingsTemplate, SyncOutcomeView,
-    PresentationTemplate, SyncStatusTemplate,
+    PresentationTemplate, SyncStatusTemplate, GoogleAccount, ImportedCalendar,
 };
 
 #[derive(Clone)]
@@ -109,6 +109,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/google/callback", get(google_callback_handler))
         .route("/auth/apple", post(apple_connect_handler))
         .route("/disconnect", post(disconnect_handler))
+        .route("/import/delete", post(delete_import_handler))
         .route("/sync", post(sync_handler))
         // Importação de arquivos .ics / .zip
         .route(
@@ -353,9 +354,10 @@ async fn fetch_merged_events(
             sqlx::query_as(
                 r#"
                 SELECT e.provider, e.title, e.description, e.start_at, e.end_at, e.is_private, e.is_transparent,
-                       e.source_filename, c.calendar_name, c.calendar_color
+                       e.source_filename, COALESCE(c.calendar_name, g.calendar_name), c.calendar_color
                 FROM wecal_events e
                 LEFT JOIN wecal_import_calendars c ON e.provider = 'import' AND e.source_filename = c.source_filename
+                LEFT JOIN wecal_connections g ON e.connection_id = g.id
                 WHERE e.end_at > $1 AND e.start_at < $2
                 ORDER BY e.start_at ASC
                 "#,
@@ -369,9 +371,10 @@ async fn fetch_merged_events(
             sqlx::query_as(
                 r#"
                 SELECT e.provider, e.title, e.description, e.start_at, e.end_at, e.is_private, e.is_transparent,
-                       e.source_filename, c.calendar_name, c.calendar_color
+                       e.source_filename, COALESCE(c.calendar_name, g.calendar_name), c.calendar_color
                 FROM wecal_events e
                 LEFT JOIN wecal_import_calendars c ON e.provider = 'import' AND e.source_filename = c.source_filename
+                LEFT JOIN wecal_connections g ON e.connection_id = g.id
                 ORDER BY e.start_at ASC
                 "#,
             )
@@ -388,6 +391,7 @@ async fn fetch_merged_events(
     // Marcador p/ identificar os eventos de import após o merge:
     // Google/Apple entram com id vazio, então qualquer valor aqui é exclusivo.
     const IMPORT_MARK: &str = "__wecal_import__";
+    const GOOGLE_MARK: &str = "__wecal_google__";
 
     for (provider, title, description, start_at, end_at, is_private, is_transparent, source_filename, calendar_name, calendar_color) in rows {
         if is_transparent {
@@ -404,14 +408,17 @@ async fn fetch_merged_events(
             continue;
         }
         match provider.as_str() {
-            "google" => google.push(GoogleEvent {
-                id: String::new(),
+            "google" => {
+                let key = format!("{GOOGLE_MARK}{}", calendar_name.as_deref().unwrap_or("Google"));
+                import_calendars.insert(key.clone(), (calendar_name, calendar_color));
+                google.push(GoogleEvent {
+                id: key,
                 summary: title,
                 description,
                 start: start_at,
                 end: end_at,
                 is_private,
-            }),
+            })},
             "apple" => apple.push(AppleEvent {
                 id: String::new(),
                 title,
@@ -441,8 +448,8 @@ async fn fetch_merged_events(
     let mut merged = merge_events(google, apple);
     // Re-rotula os que entraram com o marcador: a proveniência real é Import.
     for ev in &mut merged {
-        if ev.id.starts_with(IMPORT_MARK) {
-            ev.source = EventSource::Import;
+        if ev.id.starts_with(IMPORT_MARK) || ev.id.starts_with(GOOGLE_MARK) {
+            if ev.id.starts_with(IMPORT_MARK) { ev.source = EventSource::Import; }
             if let Some((name, color)) = import_calendars.get(&ev.id) {
                 ev.calendar_name = name.clone();
                 ev.calendar_color = color.clone();
@@ -575,12 +582,15 @@ async fn settings_handler(
     State(state): State<AppState>,
     Query(params): Query<StatusParams>,
 ) -> AppResult<Html<String>> {
-    let google_last = sqlx::query_scalar::<_, Option<DateTime<Utc>>>(
-        "SELECT last_sync_at FROM wecal_connections WHERE provider = 'google'",
-    )
-    .fetch_optional(&state.pool)
-    .await?
-    .flatten();
+    let google_accounts = sqlx::query_as::<_, (uuid::Uuid, Option<String>, Option<DateTime<Utc>>, bool)>(
+        "SELECT id, calendar_name, last_sync_at, last_error IS NOT NULL FROM wecal_connections WHERE provider = 'google' ORDER BY created_at"
+    ).fetch_all(&state.pool).await?.into_iter().map(|(id, name, last, has_error)| GoogleAccount {
+        id, has_error, name: name.unwrap_or_else(|| "Conta Google existente".into()),
+        last_sync: last.map(|t| t.format("%d/%m %H:%M").to_string()),
+    }).collect();
+    let imported_calendars = sqlx::query_as::<_, (String, String)>(
+        "SELECT source_filename, calendar_name FROM wecal_import_calendars ORDER BY calendar_name, source_filename"
+    ).fetch_all(&state.pool).await?.into_iter().map(|(filename, name)| ImportedCalendar { filename, name }).collect();
 
     let apple: Option<(Option<String>, Option<DateTime<Utc>>)> = sqlx::query_as(
         "SELECT ics_url, last_sync_at FROM wecal_connections WHERE provider = 'apple_ics'",
@@ -594,14 +604,8 @@ async fn settings_handler(
 
     let html = SettingsTemplate {
         google_configured: state.config.google_configured(),
-        google_connected: google_last.is_some()
-            || sqlx::query_scalar::<_, i32>(
-                "SELECT 1 FROM wecal_connections WHERE provider = 'google'",
-            )
-            .fetch_optional(&state.pool)
-            .await?
-            .is_some(),
-        google_last_sync: fmt(google_last),
+        google_accounts,
+        imported_calendars,
         apple_connected: apple_url.is_some(),
         apple_url: apple_url.clone(),
         apple_last_sync: fmt(apple_last),
@@ -740,7 +744,7 @@ async fn apple_connect_handler(
         r#"
         INSERT INTO wecal_connections (provider, ics_url, calendar_name)
         VALUES ('apple_ics', $1, 'iCloud')
-        ON CONFLICT (provider) DO UPDATE SET
+        ON CONFLICT (provider) WHERE provider = 'apple_ics' DO UPDATE SET
             ics_url      = EXCLUDED.ics_url,
             calendar_name = EXCLUDED.calendar_name,
             updated_at   = now()
@@ -774,27 +778,39 @@ async fn apple_connect_handler(
 #[derive(Deserialize)]
 struct DisconnectForm {
     provider: String,
+    connection_id: Option<uuid::Uuid>,
 }
 
-async fn disconnect_handler(
-    State(state): State<AppState>,
-    Form(form): Form<DisconnectForm>,
-) -> AppResult<Response> {
-    let events_provider = match form.provider.as_str() {
-        "google" => Some("google"),
-        "apple_ics" => Some("apple"),
-        _ => None,
-    };
-    if let Some(ep) = events_provider {
-        sqlx::query("DELETE FROM wecal_events WHERE provider = $1 AND external_id IS NOT NULL")
-            .bind(ep)
-            .execute(&state.pool)
-            .await?;
-        sqlx::query("DELETE FROM wecal_connections WHERE provider = $1")
-            .bind(&form.provider)
-            .execute(&state.pool)
-            .await?;
+async fn disconnect_handler(State(state): State<AppState>, Form(form): Form<DisconnectForm>) -> AppResult<Response> {
+    let mut tx = state.pool.begin().await?;
+    match (form.provider.as_str(), form.connection_id) {
+        ("google", Some(id)) => {
+            sqlx::query("DELETE FROM wecal_connections WHERE provider = 'google' AND id = $1")
+                .bind(id).execute(&mut *tx).await?;
+        }
+        ("apple_ics", _) => {
+            sqlx::query("DELETE FROM wecal_events WHERE provider = 'apple' AND external_id IS NOT NULL")
+                .execute(&mut *tx).await?;
+            sqlx::query("DELETE FROM wecal_connections WHERE provider = 'apple_ics'")
+                .execute(&mut *tx).await?;
+        }
+        _ => return Ok(StatusCode::BAD_REQUEST.into_response()),
     }
+    tx.commit().await?;
+    Ok(Redirect::to("/settings?status=desconectado").into_response())
+}
+
+#[derive(Deserialize)]
+struct DeleteImportForm { source_filename: String }
+
+async fn delete_import_handler(State(state): State<AppState>, Form(form): Form<DeleteImportForm>) -> AppResult<Response> {
+    let mut tx = state.pool.begin().await?;
+    sqlx::query("LOCK TABLE wecal_import_calendars IN EXCLUSIVE MODE").execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM wecal_events WHERE provider = 'import' AND source_filename = $1")
+        .bind(&form.source_filename).execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM wecal_import_calendars WHERE source_filename = $1")
+        .bind(&form.source_filename).execute(&mut *tx).await?;
+    tx.commit().await?;
     Ok(Redirect::to("/settings?status=desconectado").into_response())
 }
 
